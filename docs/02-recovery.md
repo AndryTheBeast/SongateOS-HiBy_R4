@@ -1,6 +1,8 @@
 # 2. Install a custom recovery (TWRP or OrangeFox)
 
 > Outline: the full guide is being written. Build details are in [`device/hiby/R4/README.md`](../device/hiby/R4/README.md).
+>
+> **Downloads:** the recovery images (OrangeFox and TWRP) are on the [Releases](https://github.com/AndryTheBeast/SongateOS-HiBy_R4/releases) page, with SHA-256 checksums.
 
 ## Will cover
 

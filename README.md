@@ -32,7 +32,7 @@ look, from the first screen at power-on to the boot animation and the charging s
 The guides are being written; each is an outline for now.
 
 1. [Back up your R4 with EDL](docs/01-backup-edl.md): a complete, verified copy of your own firmware. **Do this first.**
-2. [Install a custom recovery](docs/02-recovery.md): TWRP or OrangeFox.
+2. [Install a custom recovery](docs/02-recovery.md): TWRP or OrangeFox. Downloads: [Releases](https://github.com/AndryTheBeast/SongateOS-HiBy_R4/releases).
 3. [Install SongateOS](docs/03-install-os.md): the OS, the boot logo and the boot animation in one install.
 4. [Boot logo and animations](docs/04-branding.md): how they're made, and how to go back to HiBy's.
 
