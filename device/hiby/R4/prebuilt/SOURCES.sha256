@@ -1,0 +1,5 @@
+f7e72cc90ee9f8811aef09a3ff831f114a1a92cd74916f756a704d080214ffb7 *kernel
+452fbbddaa2069691e485ca620caba3c7ae2cbf6911bcc9864195ef5b1cd3a2c *dtb.img
+264270145ad78d5c93585b80881c7e6421a502795bac7536a139c1326eed4c62 *dtbo.img
+# Taken unmodified from the stock HiBy R4 recovery image (kernel 4.14.190-perf #9). HiBy has not published the
+# kernel source, so the kernel is prebuilt.

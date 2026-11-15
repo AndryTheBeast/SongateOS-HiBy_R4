@@ -1,0 +1,17 @@
+# Firmware and personal backups never go in this repo
+*.bin
+*.img
+!device/hiby/R4/prebuilt/dtb.img
+!device/hiby/R4/prebuilt/dtbo.img
+*.zip
+*.elf
+*.mbn
+dumps/
+backup/
+SHA256SUMS.txt
+
+# build / generator output
+out/
+*_out/
+__pycache__/
+*.pyc

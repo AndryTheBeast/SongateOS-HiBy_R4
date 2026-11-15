@@ -1,0 +1,19 @@
+# TWRP display/backup flags for HiBy R4 (standard)
+# NOTE: persist, modemst1/2, fsg, devinfo, frp, privdata*, xbl*, tz, abl etc. are intentionally NOT listed,
+# so the recovery offers no wipe/restore for them. Keep a full EDL backup of your own unit before modding.
+/system         ext4    system          flags=display="System";logical;slotselect;backup=0
+/system_ext     ext4    system_ext      flags=display="System_ext";logical;slotselect;backup=0
+/product        ext4    product         flags=display="Product";logical;slotselect;backup=0
+/vendor         ext4    vendor          flags=display="Vendor";logical;slotselect;backup=0
+
+/boot           emmc    /dev/block/bootdevice/by-name/boot          flags=display="Boot";backup=1;flashimg=1;slotselect
+/recovery       emmc    /dev/block/bootdevice/by-name/recovery      flags=display="Recovery";backup=1;flashimg=1;slotselect
+/dtbo           emmc    /dev/block/bootdevice/by-name/dtbo          flags=display="DTBO";backup=1;flashimg=1;slotselect
+/vbmeta         emmc    /dev/block/bootdevice/by-name/vbmeta        flags=display="VBMeta";backup=1;flashimg=1;slotselect
+/vbmeta_system  emmc    /dev/block/bootdevice/by-name/vbmeta_system flags=display="VBMeta System";backup=1;flashimg=1;slotselect
+/super          emmc    /dev/block/bootdevice/by-name/super         flags=display="Super (system+vendor)";backup=1;flashimg=0
+
+/metadata       ext4    /dev/block/bootdevice/by-name/metadata      flags=display="Metadata";backup=1
+
+/external_sd    auto    /dev/block/mmcblk1p1    /dev/block/mmcblk1  flags=display="MicroSD";storage;wipeingui;removable
+/usb_otg        auto    /dev/block/sdg1         /dev/block/sdg      flags=display="USB OTG";storage;wipeingui;removable

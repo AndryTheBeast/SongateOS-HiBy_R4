@@ -1,0 +1,7 @@
+# Android build files must keep LF line endings (CRLF breaks .rc/.mk on Linux build hosts)
+* text=auto eol=lf
+*.ttf binary
+*.png binary
+*.gif binary
+*.img binary
+device/hiby/R4/prebuilt/kernel binary
