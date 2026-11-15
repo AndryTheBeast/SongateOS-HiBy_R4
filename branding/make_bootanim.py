@@ -45,7 +45,8 @@ BACK = backdrop()
 def dust(im, t, alpha, x, w, h):
     """view_opening.cpp's dust: each mote lights as the star passes its place, drifts up and twinkles out."""
     for i in range(DUST):
-        u = noise(i)
+        # evenly spread across the name (one slot per mote + jitter): plain noise(i) averaged 46 px left of centre
+        u = clamp(((i * 15) % DUST + .5 + .8 * (noise(i) - .5)) / DUST)
         born = K_CROSS * math.acos(1 - 2 * clamp(u)) / math.pi
         life = 0.8 + 0.7 * noise(i + 100)
         k = (t - born) / life
@@ -123,7 +124,8 @@ def loop_frame(t):
     w, h = word.w, word.h
     for i in range(22):                                       # stardust rising slowly around the name, looping
         k = (tau * (1 + int(noise(i + 900) * 2)) + noise(i + 800)) % 1.0
-        u = noise(i + 1000)
+        # evenly spread (one slot each + jitter): plain noise(i + 1000) averaged 46 px right of centre (user 2026-11-15)
+        u = clamp(((i * 9) % 22 + .5 + .8 * (noise(i + 1000) - .5)) / 22)
         px = WX + w * (u * 1.2 - .1) + 8 * math.sin(2 * math.pi * (k + u))
         py = CY + h * (.7 - 1.6 * k)
         a = math.sin(k * math.pi) * (.55 + .45 * math.sin(2 * math.pi * (3 * tau + u)))

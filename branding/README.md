@@ -10,6 +10,7 @@ the Fraunces wordmark with its coral → amber → cream gradient, the soft glow
 | `make_symbols.py OUTDIR` | the five bootloader battery screens (4-colour palette PNGs) |
 | `build_imagefv.py STOCK_imagefv.bin LOGO.png OUT.bin [SYMBOLS_DIR]` | a new `imagefv` image from **your own** stock one |
 | `make_bootanim.py OUTDIR` | `bootanimation.zip` (Songate's opening, a loop, a fade out) + a preview GIF |
+| `make_bootanim_hold.py MAIN.zip OUT.zip` | the "hold" animation (fade in, the same loop, fade out) used until the launcher is on screen |
 | `make_charger.py OUTDIR` | the off-mode charging animation (`product/etc/res/...`) + previews |
 | `make_charger_video.py OUT.mp4 [LEVEL]` | a 60 fps preview video of the charging animation (needs ffmpeg) |
 
