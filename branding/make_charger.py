@@ -20,14 +20,16 @@ import sys
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from brand import ACCENT, ACCENT2, GLOW, TXT, W, H, Word, glow, inter, mix, sparkle, text
+from brand import ACCENT, ACCENT2, FRAUNCES, GLOW, TXT, W, H, Word, glow, inter, mix, sparkle, text
 
 FW, FH = 560, 560            # square frame, centred on the 750x1334 screen by the charger
 RC = (FW / 2, FH / 2)        # ring centre = frame centre = screen centre (the user, 2026-11-14: centred, no name)
 R, THICK = 196, 16           # ring radius and stroke
-STEP = 4                     # % per fill frame: 0,4,...,100 -> 26 frames
-HOLD = 8                     # frames of the full ring twinkling at the end
+STEP = 2                     # % per fill frame: 0,2,...,100 -> 51 frames (v2: smoother, user 2026-11-15)
+HOLD = 16                    # frames of the full ring twinkling at the end
 FONT_H = 84                  # percent digits cell height
+SUFFIX = os.environ.get("CHG_SUFFIX", "bolt")   # what the charger shows after the number: bolt / none / pct
+FONT = os.environ.get("CHG_FONT", "fraunces")   # number font: fraunces (v3) / inter (v2)
 BLACK = (0, 0, 0)
 
 # gradient along the arc (from 12 o'clock, clockwise): the wordmark's three stops
@@ -85,7 +87,7 @@ BASE = {k: np.asarray(base_layer(k), np.float32) for k in ("CHARGING", "CHARGED"
 TRACK_COL = np.array(mix(BLACK, TXT, .09), np.float32)
 
 
-def frame(fill, twinkle=0.0, t=0.0, label="CHARGING"):
+def frame(fill, twinkle=0.0, t=0.0, label="CHARGING", digits=2):
     a = BASE[label].copy()
     track, arc = ring_masks(fill)
     a += (TRACK_COL - a) * track[..., None]
@@ -118,6 +120,8 @@ def frame(fill, twinkle=0.0, t=0.0, label="CHARGING"):
             mx = RC[0] + (R + 10 * math.sin(i * 2.1 + t * 3)) * math.sin(2 * math.pi * back)
             my = RC[1] - (R + 10 * math.cos(i * 1.7 + t * 3)) * math.cos(2 * math.pi * back)
             sparkle(im, mx, my, 6 - i * .7, mix(ACCENT2, (255, 255, 255), .5), .75 - i * .12)
+    if FONT == "fraunces":
+        number_sparkle(im, t, digits)
     return im
 
 
@@ -141,14 +145,107 @@ def font_atlas():
             if ch not in "0123456789%":
                 continue
             w = f.getlength(ch)
-            # digits centred in the cell; "%" smaller look by drawing it at a smaller size
+            # digits centred in the cell. The charger always prints "<level>%", so the "%" cell decides the suffix:
+            # "bolt" = a lightning bolt drawn in its place, "none" = blank (the number then sits half a cell left),
+            # "pct" = a smaller "%"
+            if ch == "%" and SUFFIX == "none":
+                continue
+            if ch == "%" and SUFFIX == "bolt":
+                top = row * FONT_H + (FONT_H - (asc[3] - asc[1])) / 2      # digit top
+                hgt = asc[3] - asc[1]                                      # digit height
+                bw, bh = cw * .66, hgt * .92
+                # +2 px: its right side space then matches the digits' left side, so "<level><bolt>" is centred on
+                # the screen (measured over every level 1-100: within 1.5 px; the charger centres whole cells)
+                x0, y0 = i * cw + (cw - bw) / 2 + 2, top + (hgt - bh) / 2
+                pts = [(.58, 0), (0, .58), (.40, .58), (.26, 1), (1, .38), (.58, .38), (.86, 0)]
+                d.polygon([(x0 + px * bw, y0 + py * bh) for px, py in pts], fill=255)
+                continue
             if ch == "%":
                 fp = inter("Bold", 40)
                 bb = fp.getbbox("%")
                 d.text((i * cw + (cw - fp.getlength("%")) / 2, row * FONT_H + (FONT_H - (bb[3] - bb[1])) / 2 - bb[1] - 14), "%", font=fp, fill=255)
             else:
-                d.text((i * cw + (cw - w) / 2, row * FONT_H + (FONT_H - (asc[3] - asc[1])) / 2 - asc[1]), ch, font=f, fill=255)
+                dx = -3 if ch == "1" else 0          # a "1" is narrow: nudged left so a leading 1 (1x, 100) stays centred
+                d.text((i * cw + (cw - w) / 2 + dx, row * FONT_H + (FONT_H - (asc[3] - asc[1])) / 2 - asc[1]), ch, font=f, fill=255)
     return atlas, cw
+
+
+def font_atlas_fraunces():
+    """v3 (user 2026-11-15: "a better font, sparkly"): digits in Fraunces Black (Songate's wordmark face, the boot
+    logo's "R4"), the "%" cell a lightning bolt in the same weight. Drawn at 4x and scaled down (smooth edges).
+    The charger centres whole cells, so the visible ink is balanced automatically: the bolt's right space = the
+    digits' typical left space, and a narrow "1" is moved half-way towards it."""
+    S = 4
+    f = ImageFont.truetype(str(FRAUNCES), 96 * S)
+    f.set_variation_by_axes([72, 900, 100, 1])                  # opsz, wght, SOFT, WONK (display size)
+    bb0 = f.getbbox("0")
+    dig_h = bb0[3] - bb0[1]
+    cw = int(max(f.getlength(c) for c in "0123456789") / S) + 2
+    cell = lambda: Image.new("L", (cw * S, FONT_H * S), 0)
+    top = (FONT_H * S - dig_h) / 2 - bb0[1]
+
+    def draw_digit(ch, dx=0):
+        im = cell()
+        ImageDraw.Draw(im).text(((cw * S - f.getlength(ch)) / 2 + dx * S, top), ch, font=f, fill=255)
+        return im
+
+    def left_pad(im):
+        cols = np.where(np.asarray(im).max(0) > 60)[0]
+        return cols.min() / S
+
+    digits = {c: draw_digit(c) for c in "0123456789"}
+    pads = sorted(left_pad(digits[c]) for c in "0234567890")
+    lmed = pads[len(pads) // 2]
+    # A wide "1" (user 2026-11-15: big gap in "100"). The charger draws every character in an equal-width cell, and
+    # Fraunces' "1" is much narrower than its "0", so it sat alone with gaps around it. Like a tabular figure, it's
+    # drawn wider: the "1" at weight 620, stretched to 86 % of the "0" - its stroke then matches the Black digits.
+    f1 = ImageFont.truetype(str(FRAUNCES), 96 * S)
+    f1.set_variation_by_axes([72, 620, 100, 1])
+    one = Image.new("L", (int(f1.getlength("1")) + 8 * S, FONT_H * S), 0)
+    ImageDraw.Draw(one).text((4 * S, top), "1", font=f1, fill=255)
+    cols = np.where(np.asarray(one).max(0) > 60)[0]
+    one = one.crop((cols.min(), 0, cols.max() + 1, FONT_H * S))
+    zero_w = np.ptp(np.where(np.asarray(digits["0"]).max(0) > 60)[0]) + 1
+    one = one.resize((int(zero_w * .86), FONT_H * S), Image.LANCZOS)
+    digits["1"] = cell()
+    digits["1"].paste(one, ((cw * S - one.size[0]) // 2, 0))
+
+    # bolt: same height as the digits, chunky like Fraunces Black, corners softened (SOFT axis)
+    bolt = cell()
+    bh, bw = dig_h * 1.0, cw * S * .74
+    y0 = (FONT_H * S - bh) / 2
+    x0 = cw * S - lmed * S - bw                                  # right space = the digits' left space
+    pts = [(.60, 0), (0, .58), (.42, .58), (.22, 1), (1, .36), (.58, .36), (.88, 0)]
+    ImageDraw.Draw(bolt).polygon([(x0 + px * bw, y0 + py * bh) for px, py in pts], fill=255)
+    # (no blur: drawn at 4x and scaled down is smooth enough, and a blur thinned it next to the heavy digits)
+
+    atlas = Image.new("L", (96 * cw, 2 * FONT_H), 0)
+    for row in range(2):
+        for ch, im in list(digits.items()) + [("%", bolt)]:
+            i = ord(ch) - 0x20
+            atlas.paste(im.resize((cw, FONT_H), Image.LANCZOS), (i * cw, row * FONT_H))
+    return atlas, cw
+
+
+ATLAS, CW = font_atlas_fraunces()
+NUM_Y = RC[1] - FONT_H / 2 - 14               # top of the number's cells, in frame coordinates (as main's py)
+
+
+def number_sparkle(im, t, digits):
+    """Sparkle around the number (drawn under it: the charger paints the digits on top in one colour):
+    a warm glow behind it, a star at its top right (like the boot logo's "R4"), and a few motes twinkling."""
+    cx, cy = RC[0], NUM_Y + FONT_H / 2
+    glow(im, cx, cy, 120, mix(BLACK, GLOW, .5), .30 + .06 * math.sin(t * 4))
+    right = cx + (digits + 1) * CW / 2                          # the bolt's right edge
+    tw = .5 + .5 * math.sin(t * 6.0)
+    glow(im, right + 6, NUM_Y + 12, 30, mix(ACCENT, (255, 255, 255), .5), .25 + .2 * tw)
+    sparkle(im, right + 6, NUM_Y + 12, 16 + 10 * tw, (255, 255, 255), 1.0)
+    left = cx - (digits + 1) * CW / 2
+    for k, (mx, my, ph, sz) in enumerate(((left - 12, NUM_Y + 62, 1.3, 7), (cx - 8, NUM_Y - 6, 2.6, 6),
+                                          (right + 14, NUM_Y + 70, 4.1, 6), (left + 18, NUM_Y - 2, 5.2, 5))):
+        a = max(0.0, math.sin(t * 5.0 + ph))
+        if a > .05:
+            sparkle(im, mx, my, sz * (.6 + .6 * a), mix(ACCENT2, (255, 255, 255), .6), .9 * a)
 
 
 def fail_frame():
@@ -172,14 +269,16 @@ def main(out):
     spec = []
     levels = list(range(0, 101, STEP))
     for i, lv in enumerate(levels):
-        spec.append((frame(lv / 100, t=i * .09), 70, 0, min(lv, 99)))
+        # ease-out: quick sweep that slows as it reaches the top (display time grows towards 100 %)
+        ms = int(round(28 + 44 * (lv / 100) ** 3))
+        spec.append((frame(lv / 100, t=i * .05), ms, 0, min(lv, 99)))
     for j in range(HOLD):
         tw = math.sin(j / (HOLD - 1) * math.pi)
-        spec.append((frame(1.0, twinkle=tw, t=(len(levels) + j) * .09), 90, 0, 99))
-    CHARGED = 12
+        spec.append((frame(1.0, twinkle=tw, t=(len(levels) + j) * .05), 55, 0, 99))
+    CHARGED = 20
     for j in range(CHARGED):
         tw = math.sin(j / (CHARGED - 1) * math.pi)
-        spec.append((frame(1.0, twinkle=tw, t=j * .05, label="CHARGED"), 110, 100, 100))
+        spec.append((frame(1.0, twinkle=tw, t=j * .04, label="CHARGED", digits=3), 80, 100, 100))
     frames = [s[0] for s in spec]
     lines = ["frame: %d %d %d" % (ms, lo, hi) for _, ms, lo, hi in spec]
     sheet, n = interlace(frames)
@@ -188,14 +287,14 @@ def main(out):
     meta.add_text("Frames", str(n))
     sheet.save(os.path.join(img_dir, "songate_scale.png"), pnginfo=meta, optimize=True)
     fail_frame().save(os.path.join(img_dir, "songate_fail.png"), optimize=True)
-    atlas, cw = font_atlas()
+    atlas, cw = (ATLAS, CW) if FONT == "fraunces" else font_atlas()
     atlas.save(os.path.join(img_dir, "songate_font.png"), optimize=True)
 
     # percent position: the ring's centre on the screen (frame centred by the charger), digits a bit above middle
     ring_screen_y = (H - FH) // 2 + RC[1]
     py = int(ring_screen_y - FONT_H / 2 - 14)
     r, g, b = TXT
-    desc = ["# SongateOS charging animation (generated by work/bootlogo/make_charger.py)",
+    desc = ["# SongateOS charging animation (generated by branding/make_charger.py)",
             "animation: 3 2 charger/songate_scale",
             "fail: charger/songate_fail",
             "percent_display: c %d %d %d %d 255 charger/songate_font" % (py, r, g, b)] + lines
