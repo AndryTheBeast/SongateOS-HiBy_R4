@@ -14,6 +14,111 @@ public class HiByAudioSettings extends HbFragment {
     private static final String[] STEPS = {"15", "25", "50", "100"};
 
     private HeaderView header;
+    private android.database.ContentObserver outputObserver;
+    private static final android.net.Uri SVC = android.net.Uri.parse("content://com.andre.hibyr4.settings");
+
+    private android.os.Bundle svc(String method) {
+        try { return ctx().getContentResolver().call(SVC, method, null, null); } catch (Throwable t) { return null; }
+    }
+
+    private static String codecName(String c) {
+        if (c == null) return null;
+        switch (c) {
+            case "aptx": return "aptX";
+            case "aptx_hd": return "aptX HD";
+            case "opus": return "Opus";
+            default: return c.toUpperCase(java.util.Locale.ROOT);
+        }
+    }
+
+    /** The outputs as Songate's volume pop-up sees them (service output_get); empty when the service doesn't answer. */
+    private java.util.List<android.os.Bundle> outputs = new java.util.ArrayList<>();
+    private String activeId = "", choice = "auto";
+    /** Note for the DAC-only rows while something else plays, or null when the R4's own DAC plays (wired, or nothing). */
+    private String lockedNote;
+
+    @SuppressWarnings("deprecation")
+    private void loadOutputs() {
+        outputs = new java.util.ArrayList<>();
+        activeId = ""; choice = "auto";
+        android.os.Bundle o = svc("output_get");
+        if (o == null || !o.getBoolean("ok")) return;
+        java.util.ArrayList<android.os.Bundle> l = o.getParcelableArrayList("outputs");
+        if (l != null) outputs = l;
+        activeId = o.getString("active", "");
+        choice = o.getString("choice", "auto");
+    }
+
+    private android.os.Bundle output(String id) {
+        for (android.os.Bundle b : outputs) if (id.equals(b.getString("id"))) return b;
+        return null;
+    }
+
+    /** Short label for the Plays on row. */
+    private static String shortName(android.os.Bundle b) {
+        switch (b.getString("kind", "")) {
+            case "headphone_35": return "3.5 mm";
+            case "lineout_35": return "Line out 3.5";
+            case "balanced_44": return "4.4 mm";
+            case "balanced_lineout_44": return "Line out 4.4";
+            default: return b.getString("name", "?");
+        }
+    }
+
+    /** {title, line} for the card when something other than the R4's DAC plays (Bluetooth, USB DAC), else null. */
+    private String[] otherOutputCard() {
+        android.os.Bundle a = activeId.isEmpty() ? null : output(activeId);
+        if (a == null || "wired".equals(activeId)) return null;
+        String name = a.getString("name", "");
+        if ("bluetooth".equals(a.getString("kind"))) {
+            if (name.isEmpty() || "null".equals(name)) name = "Bluetooth headphones";
+            StringBuilder line = new StringBuilder("Bluetooth");
+            android.os.Bundle c = svc("bt_codec_get");
+            if (c != null && c.getBoolean("ok")) {
+                line.append(" · ").append(codecName(c.getString("codec")));
+                int rate = c.getInt("rate"), bits = c.getInt("bits");
+                if (rate > 0) line.append(" · ").append(khz(Integer.toString(rate)));
+                if (bits > 0) line.append(" / ").append(bits).append("-bit");
+            } else if (a.getString("codec") != null) {
+                line.append(" · ").append(codecName(a.getString("codec")));
+            }
+            lockedNote = "Not used while Bluetooth plays";
+            return new String[]{ name, line.toString() };
+        }
+        lockedNote = "Not used while a USB DAC plays";
+        return new String[]{ name.isEmpty() ? "USB DAC" : name, "USB DAC" };
+    }
+
+    /** "Also connected: …" for the outputs that are connected but not playing, or null. */
+    private String alsoConnected() {
+        StringBuilder sb = new StringBuilder();
+        for (android.os.Bundle b : outputs) {
+            if (b.getString("id", "").equals(activeId)) continue;
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(b.getString("name", ""));
+        }
+        return sb.length() == 0 ? null : "Also connected: " + sb;
+    }
+
+    private boolean[] chipDim() { boolean l = lockedNote != null; return new boolean[]{ l, l, false }; }   // gain, filter; EQ always applies
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (outputObserver == null) {
+            outputObserver = new android.database.ContentObserver(new android.os.Handler(android.os.Looper.getMainLooper())) {
+                @Override public void onChange(boolean self) { if (isResumed()) rebuild(); }
+            };
+            ctx().getContentResolver().registerContentObserver(android.net.Uri.parse("content://com.andre.hibyr4.settings/system/output"),
+                    false, outputObserver);
+        }
+    }
+
+    @Override
+    public void onPause() {
+        if (outputObserver != null) { ctx().getContentResolver().unregisterContentObserver(outputObserver); outputObserver = null; }
+        super.onPause();
+    }
 
     private String[] chips() {
         int[] eq = Hb.eqLoad(ctx().getContentResolver());
@@ -47,18 +152,52 @@ public class HiByAudioSettings extends HbFragment {
                 : "dsd".equals(q) ? " · DSD" : "";
         String line = !ready ? "HiBy service not running" : rate.isEmpty() ? "ES9018C2M DAC"
                 : "ES9018C2M DAC · " + khz(rate) + kind;
+        // what plays where: the service's output switcher (the same output_get / output_set as Songate's volume pop-up)
+        lockedNote = null;
+        if (ready) loadOutputs(); else outputs = new java.util.ArrayList<>();
+        String[] other = otherOutputCard();
+        if (other != null) { title = other[0]; line = other[1]; }
         header = new HeaderView(ctx(), title, line, chips());
+        header.setChips(chips(), chipDim());
+        header.setLine2(alsoConnected());
         custom(s, "header", header);
+        // Plays on: only when there's a choice (two or more outputs connected)
+        if (outputs.size() >= 2) {
+            final String[] ids = new String[outputs.size()];
+            String[] labels = new String[outputs.size()];
+            int sel = 0;
+            for (int i = 0; i < ids.length; i++) {
+                ids[i] = outputs.get(i).getString("id", "");
+                labels[i] = shortName(outputs.get(i));
+                if (ids[i].equals(activeId)) sel = i;
+            }
+            custom(s, "plays_on", new SegmentedView(ctx(), Ui.HEADPHONE, "Plays on", null, labels, sel, i -> {
+                android.os.Bundle r = null;
+                try { r = ctx().getContentResolver().call(SVC, "output_set", ids[i], null); } catch (Throwable ignored) { }
+                boolean ok = r != null && r.getBoolean("ok");
+                if (!ok) toast(r != null && r.getString("error") != null ? r.getString("error").replaceFirst("^[a-z_]+: ", "") : "Couldn't switch");
+                return ok;   // the page rebuilds from the /system/output notification
+            }));
+        }
+        final String locked = lockedNote;
 
         // ---- Sound ----
         PreferenceCategory sound = cat(s, "Sound");
-        custom(sound, "gain", new SegmentedView(ctx(), Ui.GAIN, "Gain", null,
-                new String[]{"Low", "High"}, idx(GAIN, gain, 0), i -> sendAndRefresh("gain", GAIN[i])));
-        custom(sound, "filter", new SegmentedView(ctx(), Ui.FILTER, "Digital filter", "DAC reconstruction filter – very subtle",
-                new String[]{"Fast", "Slow", "Min. phase"}, idx(FILTER, filter, 0), i -> sendAndRefresh("filter", FILTER[i])));
+        // gain and filter are the R4's DAC: greyed out (still changeable, for wired) while Bluetooth plays
+        SegmentedView gv = new SegmentedView(ctx(), Ui.GAIN, "Gain", locked,
+                new String[]{"Low", "High"}, idx(GAIN, gain, 0), i -> sendAndRefresh("gain", GAIN[i]));
+        SegmentedView fv = new SegmentedView(ctx(), Ui.FILTER, "Digital filter",
+                locked != null ? locked : "DAC reconstruction filter – very subtle",
+                new String[]{"Fast", "Slow", "Min. phase"}, idx(FILTER, filter, 0), i -> sendAndRefresh("filter", FILTER[i]));
+        // while the R4's DAC isn't playing they stay normal and changeable (set them before plugging in wired
+        // headphones); the note says they don't apply right now
+        custom(sound, "gain", gv);
+        custom(sound, "filter", fv);
         custom(sound, "balance", new BalanceView(ctx(), Math.max(-10, Math.min(10, Hb.getInt("balance", 0))),
                 v -> send("balance", Integer.toString(v))));
-        icon(seek(sound, "dsd_comp", "DSD gain compensation", 0, 9, 6, v -> "Level " + v), Ui.DSD);
+        com.android.settings.widget.SeekBarPreference dsd = icon(seek(sound, "dsd_comp", "DSD gain compensation", 0, 9, 6,
+                v -> locked != null ? "Level " + v + " · " + locked : "Level " + v), Ui.DSD);
+
 
         // ---- Equalizer ----
         PreferenceCategory eqc = cat(s, "Equalizer");
@@ -135,7 +274,7 @@ public class HiByAudioSettings extends HbFragment {
     /** send, then show the new value in the header card */
     private boolean sendAndRefresh(String key, String v) {
         boolean ok = send(key, v);
-        if (ok && header != null) header.setChips(chips());
+        if (ok && header != null) header.setChips(chips(), chipDim());
         return ok;
     }
 }

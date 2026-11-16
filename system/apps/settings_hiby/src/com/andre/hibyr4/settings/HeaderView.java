@@ -14,14 +14,16 @@ import android.view.ViewGroup;
 public class HeaderView extends View {
 
     private final Ui ui;
-    private String title, line1;
+    private String title, line1, line2;
     private String[] chips;
+    private boolean[] dim;   // chip i greyed out (setting not in use right now)
     private float progress = -1;   // 0..1 shows a bar under the line, < 0 hides it
     private final Ui.Icon icon;
     private final Paint card = new Paint(Paint.ANTI_ALIAS_FLAG), circle = new Paint(Paint.ANTI_ALIAS_FLAG),
             tTitle = new Paint(Paint.ANTI_ALIAS_FLAG), tLine = new Paint(Paint.ANTI_ALIAS_FLAG),
             chip = new Paint(Paint.ANTI_ALIAS_FLAG), tChip = new Paint(Paint.ANTI_ALIAS_FLAG),
-            barBg = new Paint(Paint.ANTI_ALIAS_FLAG), barFg = new Paint(Paint.ANTI_ALIAS_FLAG);
+            barBg = new Paint(Paint.ANTI_ALIAS_FLAG), barFg = new Paint(Paint.ANTI_ALIAS_FLAG),
+            chipDim = new Paint(Paint.ANTI_ALIAS_FLAG), tChipDim = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF r = new RectF();
 
     public HeaderView(Context c, String title, String line1, String[] chips) {
@@ -47,12 +49,20 @@ public class HeaderView extends View {
         chip.setColor(Ui.alpha(ui.accent, 0x26));
         tChip.setColor(ui.text);
         tChip.setTextSize(13 * dp);
+        chipDim.setColor(Ui.alpha(ui.text2, 0x12));
+        tChipDim.setColor(Ui.alpha(ui.text2, 0x80));
+        tChipDim.setTextSize(13 * dp);
         setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int) (172 * dp)));
     }
 
     public void setChips(String[] chips) { this.chips = chips; invalidate(); }
 
+    public void setChips(String[] chips, boolean[] dim) { this.chips = chips; this.dim = dim; invalidate(); }
+
     public void setTexts(String title, String line1) { this.title = title; this.line1 = line1; invalidate(); }
+
+    /** a smaller second line under line1 (null = none) */
+    public void setLine2(String line2) { this.line2 = line2; invalidate(); }
 
     public void setProgress(float p) { progress = p; invalidate(); }
 
@@ -87,14 +97,17 @@ public class HeaderView extends View {
             c.drawRoundRect(new RectF(b.left, b.top, b.left + pw, b.bottom), 3 * dp, 3 * dp, barFg);
         }
 
+        if (line2 != null && progress < 0) c.drawText(fit(line2, tLine, tmax), tx, r.top + 88 * dp, tLine);
         // chips: gain, filter, EQ ...
-        float x = r.left + 20 * dp, y = r.top + 100 * dp;
-        for (String t : chips) {
+        float x = r.left + 20 * dp, y = r.top + (line2 != null ? 104 : 100) * dp;
+        for (int i = 0; i < chips.length; i++) {
+            String t = chips[i];
+            boolean off = dim != null && i < dim.length && dim[i];
             float tw = tChip.measureText(t) + 24 * dp;
             if (x + tw > r.right - 16 * dp) break;
             RectF cr = new RectF(x, y, x + tw, y + 32 * dp);
-            c.drawRoundRect(cr, 16 * dp, 16 * dp, chip);
-            c.drawText(t, x + 12 * dp, y + 21 * dp, tChip);
+            c.drawRoundRect(cr, 16 * dp, 16 * dp, off ? chipDim : chip);
+            c.drawText(t, x + 12 * dp, y + 21 * dp, off ? tChipDim : tChip);
             x += tw + 8 * dp;
         }
     }

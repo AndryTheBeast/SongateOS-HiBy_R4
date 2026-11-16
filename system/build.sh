@@ -26,8 +26,8 @@ cp -r apps/hiby_r4_service/res "$W/svc/res"; mkdir -p "$W/svc/res/raw"
 (cd ota/keys && zip -q -X "$HERE/$W/svc/res/raw/otacerts.zip" songateos_release.x509.pem)
 "$BT/aapt2" compile --dir "$W/svc/res" -o "$W/svc/c/"
 "$BT/aapt2" link -o "$W/svc/base.apk" -I "$AJ" --manifest apps/hiby_r4_service/AndroidManifest.xml --min-sdk-version 30 \
-  --target-sdk-version 34 --version-code 38 --version-name 38.0 --java "$W/svc/gen" "$W"/svc/c/*.flat
-javac --release 11 -Xlint:-options -classpath "$AJ" -d "$W/svc/cls" $(find apps/hiby_r4_service/src "$W/svc/gen" -name '*.java')
+  --target-sdk-version 34 --version-code 39 --version-name 39.0 --java "$W/svc/gen" "$W"/svc/c/*.flat
+javac -encoding UTF-8 --release 11 -Xlint:-options -classpath "$AJ" -d "$W/svc/cls" $(find apps/hiby_r4_service/src "$W/svc/gen" -name '*.java')
 "$BT/d8" --lib "$AJ" --min-api 30 --output "$W/svc/dex" $(find "$W/svc/cls" -name '*.class')
 cp "$W/svc/base.apk" "$W/svc/u.apk"; (cd "$W/svc/dex" && zip -q ../u.apk classes.dex)
 mkdir -p "$OUT/system/priv-app/HiByR4Service"; sign "$W/svc/u.apk" "$OUT/system/priv-app/HiByR4Service/HiByR4Service.apk"
@@ -35,8 +35,8 @@ mkdir -p "$OUT/system/priv-app/HiByR4Service"; sign "$W/svc/u.apk" "$OUT/system/
 # Settings with the HiBy pages: the GSI's own Settings.apk + classes3.dex, re-signed with the same test key
 if [ -n "$SETTINGS_APK" ]; then
   mkdir -p "$W/set/stub" "$W/set/cls" "$W/set/dex"
-  javac --release 11 -Xlint:-options -classpath "$AJ" -d "$W/set/stub" $(find apps/settings_hiby/stubs -name '*.java')
-  javac --release 11 -Xlint:-options -classpath "$AJ:$W/set/stub" -d "$W/set/cls" $(find apps/settings_hiby/src -name '*.java')
+  javac -encoding UTF-8 --release 11 -Xlint:-options -classpath "$AJ" -d "$W/set/stub" $(find apps/settings_hiby/stubs -name '*.java')
+  javac -encoding UTF-8 --release 11 -Xlint:-options -classpath "$AJ:$W/set/stub" -d "$W/set/cls" $(find apps/settings_hiby/src -name '*.java')
   (cd "$W/set/stub" && jar cf ../stubs.jar .)
   "$BT/d8" --lib "$AJ" --classpath "$W/set/stubs.jar" --min-api 30 --output "$W/set/dex" $(find "$W/set/cls" -name '*.class')
   unzip -l "$SETTINGS_APK" | grep -q classes3.dex && { echo "Settings.apk already has classes3.dex"; exit 1; }
@@ -69,7 +69,7 @@ cp overlays/font_inter/fonts_customization.xml "$OUT/system/product/etc/fonts_cu
 
 # Master volume helper (Bluetooth fix), run by service.sh with app_process
 mkdir -p "$W/mv/cls" "$W/mv/dex"
-javac --release 11 -Xlint:-options -classpath "$AJ" -d "$W/mv/cls" apps/mastervol/MvProbe.java
+javac -encoding UTF-8 --release 11 -Xlint:-options -classpath "$AJ" -d "$W/mv/cls" apps/mastervol/MvProbe.java
 "$BT/d8" --lib "$AJ" --min-api 30 --output "$W/mv/dex" "$W/mv/cls/MvProbe.class"; cp "$W/mv/dex/classes.dex" "$OUT/mastervol.dex"
 
 # Boot hand-off animation: BOOTANIM_HOLD = the zip made by ../branding/make_bootanim_hold.py (optional)
