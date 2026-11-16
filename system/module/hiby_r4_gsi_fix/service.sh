@@ -103,6 +103,8 @@ bootanim_hold() {
   echo "$(date) boot hold: $r after $(( $(date +%s) - t0 )) s" >> $LOG
 }
 ( bootanim_hold ) &
+# SongateOS updates: /metadata/songateos hand-off for the updater in the HiBy R4 service (see ota_bridge.sh)
+( sh $MODDIR/ota_bridge.sh ) &
 # restore all saved sound settings (gain, filter, balance, ...) - see hiby_settings.sh
 sh $MODDIR/hiby_settings.sh boot_reset >> $LOG 2>&1   # 3.5 mm line out never survives a reboot
 sh $MODDIR/hiby_settings.sh apply_all >> $LOG 2>&1
@@ -123,6 +125,7 @@ pval() { echo "$1" | grep "^\[sys\.hibyr4\.$2\]" | sed 's/^[^:]*: \[\(.*\)\]$/\1
       for k in $(echo "$changed" | sed 's/^\[sys\.hibyr4\.\([^]]*\)\].*/\1/'); do
         case $k in
           ready|st_*) ;;   # status values published by this service for the header card
+          ota_*) ;;        # SongateOS updater, handled by ota_bridge.sh
           led_color|led_bright)
             if [ "$pending" != "1" ]; then
               touch $DIR/led_live; pending=1

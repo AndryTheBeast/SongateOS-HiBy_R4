@@ -21,9 +21,12 @@ sign() { "$BT/zipalign" -p -f 4 "$1" "$1.al"; "$BT/apksigner" sign --v4-signing-
 
 # HiBy R4 service (system uid: HiBy settings API, equalizer, lights, line out, DAC volume)
 mkdir -p "$W/svc/c" "$W/svc/cls" "$W/svc/dex" "$W/svc/gen"
-"$BT/aapt2" compile --dir apps/hiby_r4_service/res -o "$W/svc/c/"
+# res + res/raw/otacerts.zip = the SongateOS release certificate (public) the updater checks update zips against
+cp -r apps/hiby_r4_service/res "$W/svc/res"; mkdir -p "$W/svc/res/raw"
+(cd ota/keys && zip -q -X "$HERE/$W/svc/res/raw/otacerts.zip" songateos_release.x509.pem)
+"$BT/aapt2" compile --dir "$W/svc/res" -o "$W/svc/c/"
 "$BT/aapt2" link -o "$W/svc/base.apk" -I "$AJ" --manifest apps/hiby_r4_service/AndroidManifest.xml --min-sdk-version 30 \
-  --target-sdk-version 34 --version-code 20 --version-name 20.0 --java "$W/svc/gen" "$W"/svc/c/*.flat
+  --target-sdk-version 34 --version-code 25 --version-name 25.0 --java "$W/svc/gen" "$W"/svc/c/*.flat
 javac --release 11 -Xlint:-options -classpath "$AJ" -d "$W/svc/cls" $(find apps/hiby_r4_service/src "$W/svc/gen" -name '*.java')
 "$BT/d8" --lib "$AJ" --min-api 30 --output "$W/svc/dex" $(find "$W/svc/cls" -name '*.class')
 cp "$W/svc/base.apk" "$W/svc/u.apk"; (cd "$W/svc/dex" && zip -q ../u.apk classes.dex)

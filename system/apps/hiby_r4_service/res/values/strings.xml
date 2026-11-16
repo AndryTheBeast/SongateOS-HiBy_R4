@@ -5,6 +5,8 @@
     <string name="tile_summary">Gain, filter, balance, equalizer</string>
     <string name="led_tile_title">Status LED</string>
     <string name="led_tile_summary">Colour, brightness and charging light</string>
+    <string name="update_tile_title">SongateOS update</string>
+    <string name="update_tile_summary">Check for and install system updates</string>
     <string name="perm_label">change HiBy R4 settings</string>
     <string name="perm_desc">Read and change the HiBy R4 sound, equalizer and status LED settings.</string>
 </resources>

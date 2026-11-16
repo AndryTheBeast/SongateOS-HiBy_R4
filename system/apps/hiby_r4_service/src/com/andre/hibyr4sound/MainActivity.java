@@ -12,6 +12,7 @@ import android.provider.Settings;
  *   com.andre.hibyr4.action.OPEN_AUDIO_SETTINGS  -> Settings > HiBy audio
  *   com.andre.hibyr4.action.OPEN_LED_SETTINGS    -> Settings > Display > Status LED
  *   com.andre.hibyr4.action.OPEN_EQ_SETTINGS     -> Settings > HiBy audio > Equalizer
+ *   com.andre.hibyr4.action.OPEN_UPDATE_SETTINGS -> Settings > System > SongateOS update
  * Also the target of the Settings tiles (Settings normally opens its own page for those instead).
  */
 public class MainActivity extends Activity {
@@ -26,6 +27,9 @@ public class MainActivity extends Activity {
         } else if ("com.andre.hibyr4.action.OPEN_EQ_SETTINGS".equals(a)) {
             frag = "com.andre.hibyr4.settings.HiByEqSettings";
             title = "Equalizer";
+        } else if ("com.andre.hibyr4.action.OPEN_UPDATE_SETTINGS".equals(a)) {
+            frag = "com.andre.hibyr4.settings.HiBySystemUpdate";
+            title = "SongateOS update";
         }
         try {
             Intent i = new Intent(Intent.ACTION_MAIN);

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- System update icon (own drawing): two clockwise arcs (r 7.5 around 12,12) with solid arrow heads on their
+     tangents; same geometry as Ui.Icon UPDATE in the Settings pages (coordinates computed, not hand-placed). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:tint="?android:attr/colorControlNormal">
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="1.8" android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M5.20,8.83A7.5,7.5 0,0 1,17.30 6.70"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M19.57,8.96L19.35,4.65L15.25,8.75Z"/>
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="1.8" android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M18.80,15.17A7.5,7.5 0,0 1,6.70 17.30"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M4.43,15.04L4.65,19.35L8.75,15.25Z"/>
+</vector>

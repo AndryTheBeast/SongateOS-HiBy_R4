@@ -9,26 +9,35 @@ import android.graphics.Shader;
 import android.view.View;
 import android.view.ViewGroup;
 
-/** Header card of Settings > HiBy audio: current output, sample rate and a summary of the sound settings. */
+/** Header card of the HiBy pages (HiBy audio: output, rate, sound summary; SongateOS update: version, state):
+ *  round icon, title, one line, chips, and an optional progress bar. */
 public class HeaderView extends View {
 
     private final Ui ui;
-    private final String title, line1;
+    private String title, line1;
     private String[] chips;
+    private float progress = -1;   // 0..1 shows a bar under the line, < 0 hides it
     private final Ui.Icon icon;
     private final Paint card = new Paint(Paint.ANTI_ALIAS_FLAG), circle = new Paint(Paint.ANTI_ALIAS_FLAG),
             tTitle = new Paint(Paint.ANTI_ALIAS_FLAG), tLine = new Paint(Paint.ANTI_ALIAS_FLAG),
-            chip = new Paint(Paint.ANTI_ALIAS_FLAG), tChip = new Paint(Paint.ANTI_ALIAS_FLAG);
+            chip = new Paint(Paint.ANTI_ALIAS_FLAG), tChip = new Paint(Paint.ANTI_ALIAS_FLAG),
+            barBg = new Paint(Paint.ANTI_ALIAS_FLAG), barFg = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF r = new RectF();
 
     public HeaderView(Context c, String title, String line1, String[] chips) {
+        this(c, Ui.HEADPHONE, title, line1, chips);
+    }
+
+    public HeaderView(Context c, int iconType, String title, String line1, String[] chips) {
         super(c);
         ui = new Ui(c);
         this.title = title;
         this.line1 = line1;
         this.chips = chips;
         float dp = ui.dp;
-        icon = new Ui.Icon(c, Ui.HEADPHONE, 0xffffffff);
+        icon = new Ui.Icon(c, iconType, 0xffffffff);
+        barBg.setColor(Ui.alpha(ui.accent, 0x30));
+        barFg.setColor(ui.accent);
         circle.setColor(ui.accent);
         tTitle.setColor(ui.text);
         tTitle.setTextSize(21 * dp);
@@ -42,6 +51,16 @@ public class HeaderView extends View {
     }
 
     public void setChips(String[] chips) { this.chips = chips; invalidate(); }
+
+    public void setTexts(String title, String line1) { this.title = title; this.line1 = line1; invalidate(); }
+
+    public void setProgress(float p) { progress = p; invalidate(); }
+
+    private String fit(String s, Paint p, float max) {
+        if (p.measureText(s) <= max) return s;
+        while (s.length() > 1 && p.measureText(s + "…") > max) s = s.substring(0, s.length() - 1);
+        return s + "…";
+    }
 
     @Override
     protected void onDraw(Canvas c) {
@@ -58,8 +77,15 @@ public class HeaderView extends View {
         icon.draw(c);
 
         float tx = r.left + 90 * dp;
-        c.drawText(title, tx, r.top + 44 * dp, tTitle);
-        c.drawText(line1, tx, r.top + 67 * dp, tLine);
+        float tmax = r.right - 20 * dp - tx;
+        c.drawText(fit(title, tTitle, tmax), tx, r.top + 44 * dp, tTitle);
+        c.drawText(fit(line1, tLine, tmax), tx, r.top + 67 * dp, tLine);
+        if (progress >= 0) {
+            RectF b = new RectF(tx, r.top + 78 * dp, r.right - 24 * dp, r.top + 84 * dp);
+            c.drawRoundRect(b, 3 * dp, 3 * dp, barBg);
+            float pw = Math.max(b.height(), b.width() * Math.min(1f, progress));
+            c.drawRoundRect(new RectF(b.left, b.top, b.left + pw, b.bottom), 3 * dp, 3 * dp, barFg);
+        }
 
         // chips: gain, filter, EQ ...
         float x = r.left + 20 * dp, y = r.top + 100 * dp;

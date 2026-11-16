@@ -25,6 +25,9 @@ import java.util.regex.Pattern;
  *   "eq_set"     extras{"eq": same format} -> Bundle{"ok"}
  *   "led_live"   extras{"color":"rrggbb","bright":int,"effect":"solid|breath"} -> draws the custom colour at once
  *                (only while LED mode is "custom"; save it with "set led_color" afterwards)
+ *   "ota_status" -> Bundle{state, current, latest, notes, size, progress, error, recovery, result, auto, beta, ...}
+ *   "ota_check"  -> starts a check for a SongateOS update (result in ota_status)
+ *   "ota_download" / "ota_install" / "ota_cancel" / "ota_set" -> Settings (uid system) only
  * query(content://com.andre.hibyr4.settings/all) -> rows (key, value) of the same data as "get".
  *
  * Runs as the system user (platform-signed, sharedUserId android.uid.system), so it may set the sys.hibyr4.*
@@ -149,9 +152,46 @@ public class HiBySettingsProvider extends ContentProvider {
                 boolean breath = "breath".equals(extras.getString("effect", "solid"));
                 return result(LedLive.draw(c.toLowerCase(), Math.max(0, Math.min(100, br)), breath), null);
             }
+            // ---- SongateOS updates (see Updater). Status and check: any caller with the permission (a launcher may
+            // show "update available"). Download, install and options: only Settings (uid system), where the user
+            // sees the release notes and confirms.
+            case "ota_status":
+                return Updater.status(getContext());
+            case "ota_check":
+                return result(Updater.checkAsync(getContext(), true, null), null);
+            case "ota_download": {
+                if (!fromSystem()) return result(false, "only Settings may download updates");
+                String err = Updater.downloadAsync(getContext());
+                return result(err == null, err);
+            }
+            case "ota_cancel":
+                if (!fromSystem()) return result(false, "only Settings may cancel");
+                Updater.cancel();
+                return result(true, null);
+            case "ota_install": {
+                if (!fromSystem()) return result(false, "only Settings may install updates");
+                String err = Updater.installAsync(getContext());
+                return result(err == null, err);
+            }
+            case "ota_preflight": {
+                String err = Updater.preflight(getContext());
+                return result(err == null, err);
+            }
+            case "reboot": {   // arg: system | recovery | recovery_check (recovery records itself and comes back)
+                if (!fromSystem()) return result(false, "only Settings may restart the R4");
+                String err = Updater.rebootAsync(getContext(), arg);
+                return result(err == null, err);
+            }
+            case "ota_set": {
+                if (!fromSystem()) return result(false, "only Settings may change update options");
+                String v = extras == null ? null : extras.getString("value");
+                return result(Updater.set(getContext(), arg, v), null);
+            }
         }
         return result(false, "unknown method " + method);
     }
+
+    private static boolean fromSystem() { return android.os.Binder.getCallingUid() == android.os.Process.SYSTEM_UID; }
 
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {

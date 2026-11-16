@@ -120,6 +120,12 @@ TW_INCLUDE_FASTBOOTD := true
 TW_EXCLUDE_TWRPAPP := true
 TW_NO_EXFAT_FUSE := true
 TW_DEFAULT_EXTERNAL_STORAGE := true
+# lptools: the SongateOS update zip uses it to grow system_a inside super when a new system image is larger
+TW_INCLUDE_LPTOOLS := true
+
+# SongateOS OTA: recovery/root/system/bin/runatboot.sh turns /metadata/songateos/ota.cmd into an
+# OpenRecoveryScript; recovery/root/system/etc/security/songateos_otacerts.zip = the release certificate
+# (public), used for the signature check of update zips started that way (see system/ota/README.md).
 
 # USB: kernel uses configfs; TWRP's default init.recovery.usb.rc is legacy android_usb only,
 # which never binds the UDC for "mtp,adb" (no USB at all). Own configfs rc in recovery/root.

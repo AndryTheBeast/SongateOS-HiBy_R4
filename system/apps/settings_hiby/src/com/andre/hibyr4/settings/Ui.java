@@ -33,7 +33,8 @@ final class Ui {
     float endPad() { return 24 * dp; }
 
     static final int HEADPHONE = 0, GAIN = 1, FILTER = 2, BALANCE = 3, EQ = 4, DSD = 5, REMOTE = 6, STEPS = 7,
-            TURBO = 8, JACK = 9, LED = 10;
+            TURBO = 8, JACK = 9, LED = 10, UPDATE = 11, DOWNLOAD = 12, RECOVERY = 13, BETA = 14, AUTO = 15,
+            NOTES = 16, CHECK = 17, POWER = 18;
 
     /** 24x24 line icon in the given colour. */
     static final class Icon extends Drawable {
@@ -126,8 +127,66 @@ final class Ui {
                                 12 + (float) Math.cos(a) * 9.5f, 12 + (float) Math.sin(a) * 9.5f, p);
                     }
                     break;
+                case UPDATE:   // two circular arrows (system update), solid heads on the arc tangents
+                    arrowArc(c, 205, 110);
+                    arrowArc(c, 25, 110);
+                    break;
+                case DOWNLOAD:  // arrow into a tray
+                    c.drawLine(12, 3.5f, 12, 15, p);
+                    path.moveTo(7.5f, 10.5f); path.lineTo(12, 15); path.lineTo(16.5f, 10.5f);
+                    path.moveTo(4, 15.5f); path.lineTo(4, 20); path.lineTo(20, 20); path.lineTo(20, 15.5f);
+                    c.drawPath(path, p);
+                    break;
+                case RECOVERY:  // shield with a tick
+                    path.moveTo(12, 2.5f); path.lineTo(19.5f, 5.5f); path.lineTo(19.5f, 11);
+                    path.quadTo(19.5f, 18, 12, 21.5f); path.quadTo(4.5f, 18, 4.5f, 11); path.lineTo(4.5f, 5.5f); path.close();
+                    path.moveTo(8.5f, 12); path.lineTo(11, 14.5f); path.lineTo(15.5f, 9.5f);
+                    c.drawPath(path, p);
+                    break;
+                case BETA:      // flask
+                    path.moveTo(9.5f, 3); path.lineTo(14.5f, 3);
+                    path.moveTo(10.5f, 3); path.lineTo(10.5f, 9.5f); path.lineTo(5, 19); path.quadTo(4.5f, 21, 6.5f, 21);
+                    path.lineTo(17.5f, 21); path.quadTo(19.5f, 21, 19, 19); path.lineTo(13.5f, 9.5f); path.lineTo(13.5f, 3);
+                    path.moveTo(7.5f, 15); path.lineTo(16.5f, 15);
+                    c.drawPath(path, p);
+                    break;
+                case AUTO:      // clock
+                    c.drawCircle(12, 12, 9, p);
+                    path.moveTo(12, 7); path.lineTo(12, 12); path.lineTo(15.5f, 14);
+                    c.drawPath(path, p);
+                    break;
+                case NOTES:     // page with lines
+                    c.drawRoundRect(new RectF(5, 3, 19, 21), 2.5f, 2.5f, p);
+                    c.drawLine(8.5f, 8, 15.5f, 8, p); c.drawLine(8.5f, 12, 15.5f, 12, p); c.drawLine(8.5f, 16, 13, 16, p);
+                    break;
+                case POWER:     // power symbol
+                    c.drawArc(new RectF(4, 4.5f, 20, 20.5f), 300, 300, false, p);
+                    c.drawLine(12, 3, 12, 11.5f, p);
+                    break;
+                case CHECK:     // circle with a tick
+                    c.drawCircle(12, 12, 9, p);
+                    path.moveTo(8, 12.2f); path.lineTo(11, 15.2f); path.lineTo(16.2f, 9.2f);
+                    c.drawPath(path, p);
+                    break;
             }
             c.restoreToCount(save);
+        }
+
+        /** Clockwise arc (radius 7.5 around the centre) ending in a solid arrow head that sits on the arc's end,
+         *  pointing along its tangent (angles in degrees, Android's clockwise convention). */
+        private void arrowArc(Canvas c, float start, float sweep) {
+            float r = 7.5f;
+            c.drawArc(new RectF(12 - r, 12 - r, 12 + r, 12 + r), start, sweep, false, p);
+            double a = Math.toRadians(start + sweep);
+            float ex = 12 + r * (float) Math.cos(a), ey = 12 + r * (float) Math.sin(a);
+            float tx = (float) -Math.sin(a), ty = (float) Math.cos(a);   // tangent (direction of travel)
+            float nx = (float) Math.cos(a), ny = (float) Math.sin(a);    // normal (outwards)
+            Path h = new Path();
+            h.moveTo(ex + 3.2f * tx, ey + 3.2f * ty);
+            h.lineTo(ex + 2.9f * nx, ey + 2.9f * ny);
+            h.lineTo(ex - 2.9f * nx, ey - 2.9f * ny);
+            h.close();
+            c.drawPath(h, f);
         }
 
         @Override public void setAlpha(int a) { p.setAlpha(a); f.setAlpha(a); }

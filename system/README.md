@@ -7,8 +7,9 @@ module (`hiby_r4_gsi_fix`). The full SongateOS build will carry the same pieces 
 |---|---|
 | [`module/hiby_r4_gsi_fix`](module/hiby_r4_gsi_fix) | Boot scripts and configs: HiBy's DAC outputs (3.5 mm / 4.4 mm, line out), sound settings, lights, Bluetooth audio fix, native rate (`out_rate`), wired bit-perfect, boot hand-off to Songate |
 | [`patches`](patches) | `patch_libs.sh`: makes the patched audio libraries **from your own device's files** (no binaries in this repo) |
-| [`apps/hiby_r4_service`](apps/hiby_r4_service) | HiBy R4 service (system app): the HiBy settings API for apps, equalizer, lights, line out, wired volume in the DAC |
-| [`apps/settings_hiby`](apps/settings_hiby) | The "HiBy audio" and "Lights" pages added to Android's Settings |
+| [`apps/hiby_r4_service`](apps/hiby_r4_service) | HiBy R4 service (system app): the HiBy settings API for apps, equalizer, lights, line out, wired volume in the DAC, the SongateOS updater |
+| [`apps/settings_hiby`](apps/settings_hiby) | The "HiBy audio", "Lights" and "SongateOS update" pages added to Android's Settings |
+| [`ota`](ota) | System updates from GitHub releases: release key tool, update zip builder and installer, signature checker ([how it works](ota/README.md)) |
 | [`apps/mastervol`](apps/mastervol) | Helper that sets Android's master volume (Bluetooth fix) |
 | [`overlays`](overlays) | No voice/SMS, black boot hand-off screen, black default wallpaper |
 | [`tools`](tools) | `BpTest`: a bit-perfect test player for checking the audio path with logs |
