@@ -30,13 +30,13 @@ look, from the first screen at power-on to the boot animation and the charging s
 
 ## Guides
 
-The guides are being written; each is an outline for now.
-
 1. [Back up your R4 with EDL](docs/01-backup-edl.md): a complete, verified copy of your own firmware. **Do this first.**
 2. [Install a custom recovery](docs/02-recovery.md): TWRP or OrangeFox. Downloads: [Releases](https://github.com/AndryTheBeast/SongateOS-HiBy_R4/releases).
-3. [Install SongateOS](docs/03-install-os.md): the OS, the boot logo and the boot animation in one install.
-4. [Boot logo and animations](docs/04-branding.md): how they're made, and how to go back to HiBy's.
+3. [Install SongateOS](docs/03-install-os.md): the OS, the boot logo and the boot animation in one install. *(Outline: the OS isn't released yet.)*
+4. [Boot logo and animations](docs/04-branding.md): how they're made, and how to go back to HiBy's. *(Outline.)*
 5. [Audio: bit-perfect, DAC volume and MQA](docs/05-audio.md): how sound reaches the DAC untouched, and what was changed.
+6. [Root with Magisk](docs/06-root-magisk.md): root on HiBy's firmware or on SongateOS, and how to remove it.
+7. [Back to stock](docs/07-back-to-stock.md): return to HiBy's firmware from your own backup.
 
 ## Repository
 
