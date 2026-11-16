@@ -15,3 +15,9 @@ out/
 *_out/
 __pycache__/
 *.pyc
+
+# system/: built and patched binaries are made on your own machine/device, never committed
+*.so
+*.apk
+*.dex
+system/keys/

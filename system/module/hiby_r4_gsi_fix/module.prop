@@ -1,0 +1,6 @@
+id=hiby_r4_gsi_fix
+name=SongateOS system fixes for the HiBy R4
+version=v8
+versionCode=8
+author=AndryTheBeast
+description=HiBy R4 (standard model) on a LineageOS 21 GSI: HiBy's DAC outputs, settings, lights, Bluetooth audio, wired bit-perfect with the volume in the DAC, boot hand-off to Songate.

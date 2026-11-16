@@ -1,0 +1,4 @@
+allow hal_health_default sysfs file { read open getattr }
+allow hal_health_default sysfs dir { read open search getattr }
+allow system_app audio_device dir { search read open getattr }
+allow system_app audio_device chr_file { read write open ioctl getattr }

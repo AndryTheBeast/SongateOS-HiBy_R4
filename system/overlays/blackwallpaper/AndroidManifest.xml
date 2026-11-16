@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SongateOS: Android's built-in default wallpaper becomes black. Songate (the launcher) draws its own background, so
+     the wallpaper is only ever seen in the moment between the boot animation and the hold animation, where FallbackHome
+     shows it - now that moment is black too. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="me.andre.hibyr4.overlay.blackwallpaper">
+    <overlay android:targetPackage="android" android:isStatic="true" android:priority="991" />
+    <application android:hasCode="false" />
+</manifest>

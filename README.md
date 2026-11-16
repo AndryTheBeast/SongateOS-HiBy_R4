@@ -22,6 +22,7 @@ look, from the first screen at power-on to the boot animation and the charging s
 |---|---|
 | **Songate as the home screen** | starts straight into the music app, no second launcher |
 | **HiBy audio** | the HiBy DAC (ES9018C2M) on 3.5 mm and 4.4 mm, gain, filters, balance, line out, equalizer |
+| **Bit-perfect** | on 3.5 mm and 4.4 mm, up to 384 kHz, with the volume done in the DAC; Tidal MQA is decoded by HiBy's driver |
 | **Status lights** | colour LED and back light: notifications, low battery, charging, audio quality colour, bass pulse |
 | **Bluetooth audio** | works (tested with AAC); more codecs to be checked |
 | **SongateOS look** | boot logo, boot animation and charging animation in Songate's style |
@@ -35,6 +36,7 @@ The guides are being written; each is an outline for now.
 2. [Install a custom recovery](docs/02-recovery.md): TWRP or OrangeFox. Downloads: [Releases](https://github.com/AndryTheBeast/SongateOS-HiBy_R4/releases).
 3. [Install SongateOS](docs/03-install-os.md): the OS, the boot logo and the boot animation in one install.
 4. [Boot logo and animations](docs/04-branding.md): how they're made, and how to go back to HiBy's.
+5. [Audio: bit-perfect, DAC volume and MQA](docs/05-audio.md): how sound reaches the DAC untouched, and what was changed.
 
 ## Repository
 
@@ -42,9 +44,11 @@ The guides are being written; each is an outline for now.
 |---|---|
 | [`device/hiby/R4`](device/hiby/R4) | Recovery device tree: builds TWRP (twrp-12.1) and OrangeFox (fox_12.1) |
 | [`branding`](branding) | Generators for the boot logo, low-battery screens, boot animation and charging animation, plus the boot logo image builder |
+| [`system`](system) | The system module: HiBy DAC outputs and settings, lights, Bluetooth fix, wired bit-perfect with DAC volume, the HiBy R4 service and Settings pages, and a tool that patches your own device's audio libraries |
 | [`docs`](docs) | The guides |
 
-Not included, on purpose: HiBy or Qualcomm firmware files (stock images, the EDL loader, HiBy's audio libraries)
+Not included, on purpose: HiBy or Qualcomm firmware files (stock images, the EDL loader, HiBy's audio libraries,
+also not in patched form: `system/patches/patch_libs.sh` patches your own copy)
 and anyone's personal backup. You make and keep **your own** backup (guide 1).
 
 ## Safety rules (read before touching your player)

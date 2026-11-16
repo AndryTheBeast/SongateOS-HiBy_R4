@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SongateOS: Settings' FallbackHome ("Android is starting...", shown between the boot animation and the launcher
+     while the user's storage unlocks) becomes a plain black screen. The boot animation ends on black and Songate
+     fades in from black, so the hand-off looks like one motion. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="me.andre.hibyr4.overlay.fallbackhome">
+    <overlay android:targetPackage="com.android.settings" android:isStatic="true" android:priority="990" />
+    <application android:hasCode="false" />
+</manifest>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HiBy R4 service</string>
+    <string name="tile_title">HiBy audio</string>
+    <string name="tile_summary">Gain, filter, balance, equalizer</string>
+    <string name="led_tile_title">Status LED</string>
+    <string name="led_tile_summary">Colour, brightness and charging light</string>
+    <string name="perm_label">change HiBy R4 settings</string>
+    <string name="perm_desc">Read and change the HiBy R4 sound, equalizer and status LED settings.</string>
+</resources>
