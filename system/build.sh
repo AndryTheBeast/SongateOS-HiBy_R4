@@ -26,7 +26,7 @@ cp -r apps/hiby_r4_service/res "$W/svc/res"; mkdir -p "$W/svc/res/raw"
 (cd ota/keys && zip -q -X "$HERE/$W/svc/res/raw/otacerts.zip" songateos_release.x509.pem)
 "$BT/aapt2" compile --dir "$W/svc/res" -o "$W/svc/c/"
 "$BT/aapt2" link -o "$W/svc/base.apk" -I "$AJ" --manifest apps/hiby_r4_service/AndroidManifest.xml --min-sdk-version 30 \
-  --target-sdk-version 34 --version-code 31 --version-name 31.0 --java "$W/svc/gen" "$W"/svc/c/*.flat
+  --target-sdk-version 34 --version-code 38 --version-name 38.0 --java "$W/svc/gen" "$W"/svc/c/*.flat
 javac --release 11 -Xlint:-options -classpath "$AJ" -d "$W/svc/cls" $(find apps/hiby_r4_service/src "$W/svc/gen" -name '*.java')
 "$BT/d8" --lib "$AJ" --min-api 30 --output "$W/svc/dex" $(find "$W/svc/cls" -name '*.class')
 cp "$W/svc/base.apk" "$W/svc/u.apk"; (cd "$W/svc/dex" && zip -q ../u.apk classes.dex)

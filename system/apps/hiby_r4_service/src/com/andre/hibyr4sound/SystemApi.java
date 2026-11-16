@@ -1,6 +1,9 @@
 package com.andre.hibyr4sound;
 
+import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothCodecConfig;
+import android.bluetooth.BluetoothCodecStatus;
 import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -10,7 +13,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.app.AlarmManager;
 import android.content.pm.PackageManager;
+import android.database.ContentObserver;
+import android.hardware.display.DisplayManager;
+import android.provider.Settings;
 import android.media.AudioAttributes;
 import android.media.AudioDeviceCallback;
 import android.media.AudioDeviceInfo;
@@ -27,7 +34,9 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.PowerManager;
 import android.os.Process;
+import android.os.StatFs;
 import android.os.SystemClock;
+import android.os.storage.StorageManager;
 import android.util.Log;
 
 import java.lang.reflect.Method;
@@ -52,7 +61,7 @@ final class SystemApi {
     static final String PERM = "com.andre.hibyr4.permission.SYSTEM_SETTINGS";
     static final String BASE = "content://com.andre.hibyr4.settings/system/";
     static final int API = 1;
-    static final String[] CAPS = { "wifi", "bt", "output", "theme", "power", "ota" };
+    static final String[] CAPS = { "wifi", "bt", "bt_codec", "display", "earbuds", "output", "storage", "time", "about", "usb", "theme", "power", "ota" };
 
     private static Context sApp;
     private static Handler sH;
@@ -92,6 +101,38 @@ final class SystemApi {
             @Override public void onAudioDevicesRemoved(AudioDeviceInfo[] removed) { onOutputsChanged(null, removed); }
         }, sH);
         sH.postDelayed(SystemApi::restoreOutputChoice, 5000);
+        connectA2dp();
+        ContentObserver disp = new ContentObserver(sH) {
+            @Override public void onChange(boolean self) { SystemApi.notify("display"); }
+        };
+        for (String k : new String[]{ Settings.System.SCREEN_BRIGHTNESS, "screen_brightness_float", Settings.System.SCREEN_OFF_TIMEOUT })
+            sApp.getContentResolver().registerContentObserver(Settings.System.getUriFor(k), false, disp);
+        ContentObserver time = new ContentObserver(sH) {
+            @Override public void onChange(boolean self) { SystemApi.notify("time"); }
+        };
+        sApp.getContentResolver().registerContentObserver(Settings.Global.getUriFor(Settings.Global.AUTO_TIME), false, time);
+        sApp.getContentResolver().registerContentObserver(Settings.Global.getUriFor(Settings.Global.AUTO_TIME_ZONE), false, time);
+        sApp.getContentResolver().registerContentObserver(Settings.System.getUriFor(Settings.System.TIME_12_24), false, time);
+        IntentFilter tf = new IntentFilter(Intent.ACTION_TIME_CHANGED);
+        tf.addAction(Intent.ACTION_TIMEZONE_CHANGED);
+        sApp.registerReceiver(new BroadcastReceiver() {
+            @Override public void onReceive(Context ctx, Intent i) { SystemApi.notify("time"); }
+        }, tf, null, sH, Context.RECEIVER_EXPORTED);
+        Intent usb = sApp.registerReceiver(new BroadcastReceiver() {
+            @Override public void onReceive(Context ctx, Intent i) { onUsbState(i); }
+        }, new IntentFilter("android.hardware.usb.action.USB_STATE"), null, sH, Context.RECEIVER_EXPORTED);
+        if (usb != null) sUsbConnected = usb.getBooleanExtra("connected", false);   // sticky
+        IntentFilter vol = new IntentFilter("android.os.storage.action.VOLUME_STATE_CHANGED");
+        sApp.registerReceiver(new BroadcastReceiver() {
+            @Override public void onReceive(Context ctx, Intent i) { SystemApi.notify("storage"); }
+        }, vol, null, sH, Context.RECEIVER_EXPORTED);
+        IntentFilter media = new IntentFilter();
+        for (String a : new String[]{ Intent.ACTION_MEDIA_MOUNTED, Intent.ACTION_MEDIA_UNMOUNTED, Intent.ACTION_MEDIA_EJECT,
+                Intent.ACTION_MEDIA_REMOVED, Intent.ACTION_MEDIA_BAD_REMOVAL }) media.addAction(a);
+        media.addDataScheme("file");
+        sApp.registerReceiver(new BroadcastReceiver() {
+            @Override public void onReceive(Context ctx, Intent i) { SystemApi.notify("storage"); }
+        }, media, null, sH, Context.RECEIVER_EXPORTED);
     }
 
     /** Songate (its certificate, through the permission) or the system / platform apps. */
@@ -120,7 +161,7 @@ final class SystemApi {
     static Bundle call(Context c, String method, String arg, Bundle extras) {
         if ("sys_info".equals(method)) return sysInfo();
         boolean ours = method.startsWith("wifi_") || method.startsWith("bt_") || method.startsWith("output_")
-                || method.equals("power");
+                || method.startsWith("display_") || method.startsWith("earbuds_") || method.startsWith("storage_") || method.startsWith("time_") || method.startsWith("usb_") || method.equals("about") || method.equals("zones_list") || method.equals("power");
         if (!ours) return null;
         if (!trusted(c)) return err("no_permission", "Only Songate can change system settings");
         String v = extras == null ? null : extras.getString("value");
@@ -136,6 +177,21 @@ final class SystemApi {
                 case "bt_set_enabled": return bool(v) == null ? err("bad_arg", "value must be 0 or 1") : btSetEnabled(bool(v));
                 case "bt_discover": return btDiscover(arg);
                 case "bt_pair": case "bt_connect": case "bt_disconnect": case "bt_unpair": return btDevice(method, arg);
+                case "bt_codec_get": return btCodecGet(arg);
+                case "bt_codec_set": return btCodecSet(arg, extras);
+                case "earbuds_get": { Bundle[] e = new Bundle[1]; BluetoothDevice d = a2dpDevice(arg, e); return d == null ? e[0] : Earbuds.get(d); }
+                case "earbuds_set": { Bundle[] e = new Bundle[1]; BluetoothDevice d = a2dpDevice(arg, e); return d == null ? e[0] : Earbuds.set(d, extras); }
+                case "about": return about();
+                case "usb_get": return usbGet();
+                case "usb_set": return usbSet(arg);
+                case "time_get": return timeGet();
+                case "time_set": return timeSet(arg, v);
+                case "zones_list": return zonesList(arg);
+                case "storage_get": return storageGet();
+                case "storage_eject": return storageMount(arg, false);
+                case "storage_mount": return storageMount(arg, true);
+                case "display_get": return displayGet();
+                case "display_set": return displaySet(arg, v);
                 case "output_get": return outputGet();
                 case "output_set": return outputSet(arg);
                 case "power": return power(arg);
@@ -543,6 +599,445 @@ final class SystemApi {
         return res(r, "Android refused it");
     }
 
+    // ------------------------------------------------------------------ Bluetooth codec (phase 2)
+    private static volatile BluetoothA2dp sA2dp;
+    private static volatile boolean sA2dpAsked;
+
+    private static void connectA2dp() {
+        BluetoothAdapter a = bt();
+        if (a == null || sA2dp != null || sA2dpAsked) return;
+        sA2dpAsked = true;
+        a.getProfileProxy(sApp, new BluetoothProfile.ServiceListener() {
+            @Override public void onServiceConnected(int p, BluetoothProfile proxy) { sA2dp = (BluetoothA2dp) proxy; SystemApi.notify("bt"); SystemApi.notify("output"); }
+            @Override public void onServiceDisconnected(int p) { sA2dp = null; sA2dpAsked = false; }
+        }, BluetoothProfile.A2DP);
+    }
+
+    /** Hidden (system API) on the public SDK: called by reflection. */
+    private static BluetoothCodecStatus codecStatus(BluetoothA2dp p, BluetoothDevice d) {
+        try {
+            return (BluetoothCodecStatus) BluetoothA2dp.class.getMethod("getCodecStatus", BluetoothDevice.class).invoke(p, d);
+        } catch (ReflectiveOperationException x) { Log.w(TAG, "getCodecStatus", x); return null; }
+    }
+
+    private static final int[][] CODECS = {
+        { BluetoothCodecConfig.SOURCE_CODEC_TYPE_SBC }, { BluetoothCodecConfig.SOURCE_CODEC_TYPE_AAC },
+        { BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX }, { BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX_HD },
+        { BluetoothCodecConfig.SOURCE_CODEC_TYPE_LDAC }, { BluetoothCodecConfig.SOURCE_CODEC_TYPE_LC3 },
+        { BluetoothCodecConfig.SOURCE_CODEC_TYPE_OPUS } };
+    private static final String[] CODEC_NAMES = { "sbc", "aac", "aptx", "aptx_hd", "ldac", "lc3", "opus" };
+    private static final String[] LDAC_NAMES = { "hq", "sq", "mq", "abr" };   // codecSpecific1 1000..1003
+
+    private static String codecName(int type) {
+        for (int i = 0; i < CODECS.length; i++) if (CODECS[i][0] == type) return CODEC_NAMES[i];
+        return "codec" + type;
+    }
+    private static int codecType(String name) {
+        for (int i = 0; i < CODEC_NAMES.length; i++) if (CODEC_NAMES[i].equals(name)) return CODECS[i][0];
+        return -1;
+    }
+    private static int rateHz(int r) {
+        switch (r) {
+            case BluetoothCodecConfig.SAMPLE_RATE_44100: return 44100;
+            case BluetoothCodecConfig.SAMPLE_RATE_48000: return 48000;
+            case BluetoothCodecConfig.SAMPLE_RATE_88200: return 88200;
+            case BluetoothCodecConfig.SAMPLE_RATE_96000: return 96000;
+            case BluetoothCodecConfig.SAMPLE_RATE_176400: return 176400;
+            case BluetoothCodecConfig.SAMPLE_RATE_192000: return 192000;
+            default: return 0;
+        }
+    }
+    private static int bits(int b) {
+        return b == BluetoothCodecConfig.BITS_PER_SAMPLE_16 ? 16 : b == BluetoothCodecConfig.BITS_PER_SAMPLE_24 ? 24
+                : b == BluetoothCodecConfig.BITS_PER_SAMPLE_32 ? 32 : 0;
+    }
+
+    /** The A2DP device: the address given, or the connected one when arg is empty. Null + error in out[0]. */
+    private static BluetoothDevice a2dpDevice(String address, Bundle[] out) {
+        BluetoothAdapter a = bt();
+        if (a == null) { out[0] = err("unsupported", "No Bluetooth"); return null; }
+        if (!a.isEnabled()) { out[0] = err("off", "Bluetooth is off"); return null; }
+        BluetoothA2dp p = sA2dp;
+        if (p == null) { connectA2dp(); out[0] = err("busy", "Bluetooth audio isn't ready yet, try again"); return null; }
+        List<BluetoothDevice> conn = p.getConnectedDevices();
+        if (address == null || address.isEmpty()) {
+            if (conn.isEmpty()) { out[0] = err("not_connected", "No Bluetooth headphones connected"); return null; }
+            return conn.get(0);
+        }
+        if (!BluetoothAdapter.checkBluetoothAddress(address)) { out[0] = err("bad_arg", "Not a Bluetooth address"); return null; }
+        for (BluetoothDevice d : conn) if (d.getAddress().equals(address)) return d;
+        out[0] = err("not_connected", "That device isn't connected for music");
+        return null;
+    }
+
+    static Bundle btCodecGet(String address) {
+        Bundle[] e = new Bundle[1];
+        BluetoothDevice d = a2dpDevice(address, e);
+        if (d == null) return e[0];
+        BluetoothCodecStatus st = codecStatus(sA2dp, d);
+        if (st == null || st.getCodecConfig() == null) return err("busy", "The codec isn't known yet, try again");
+        BluetoothCodecConfig c = st.getCodecConfig();
+        Bundle b = ok();
+        b.putString("address", d.getAddress());
+        b.putString("codec", codecName(c.getCodecType()));
+        b.putInt("rate", rateHz(c.getSampleRate()));
+        b.putInt("bits", bits(c.getBitsPerSample()));
+        if (c.getCodecType() == BluetoothCodecConfig.SOURCE_CODEC_TYPE_LDAC) {
+            long q = c.getCodecSpecific1() - 1000;
+            b.putString("ldac", q >= 0 && q < 4 ? LDAC_NAMES[(int) q] : "abr");
+        }
+        ArrayList<String> avail = new ArrayList<>();
+        for (BluetoothCodecConfig s : st.getCodecsSelectableCapabilities()) {
+            String n = codecName(s.getCodecType());
+            if (!avail.contains(n)) avail.add(n);
+        }
+        b.putStringArray("available", avail.toArray(new String[0]));
+        return b;
+    }
+
+    static Bundle btCodecSet(String address, Bundle extras) {
+        Bundle[] e = new Bundle[1];
+        BluetoothDevice d = a2dpDevice(address, e);
+        if (d == null) return e[0];
+        String name = extras == null ? null : extras.getString("codec");
+        int type = codecType(name);
+        if (type < 0) return err("bad_arg", "codec must be one of sbc, aac, aptx, aptx_hd, ldac, lc3, opus");
+        String ldac = extras.getString("ldac");
+        long spec = 0;
+        if (ldac != null && !ldac.isEmpty()) {
+            if (type != BluetoothCodecConfig.SOURCE_CODEC_TYPE_LDAC) return err("bad_arg", "ldac quality is for LDAC only");
+            int i = java.util.Arrays.asList(LDAC_NAMES).indexOf(ldac);
+            if (i < 0) return err("bad_arg", "ldac must be hq, sq, mq or abr");
+            spec = 1000 + i;
+        }
+        BluetoothCodecStatus st = codecStatus(sA2dp, d);
+        boolean can = false;
+        if (st != null) for (BluetoothCodecConfig s : st.getCodecsSelectableCapabilities()) if (s.getCodecType() == type) can = true;
+        if (!can) return err("unsupported", "These headphones don't support that codec");
+        BluetoothCodecConfig want = new BluetoothCodecConfig.Builder()
+                .setCodecType(type).setCodecPriority(BluetoothCodecConfig.CODEC_PRIORITY_HIGHEST)
+                .setSampleRate(BluetoothCodecConfig.SAMPLE_RATE_NONE).setBitsPerSample(BluetoothCodecConfig.BITS_PER_SAMPLE_NONE)
+                .setChannelMode(BluetoothCodecConfig.CHANNEL_MODE_NONE).setCodecSpecific1(spec).build();
+        try {
+            BluetoothA2dp.class.getMethod("setCodecConfigPreference", BluetoothDevice.class, BluetoothCodecConfig.class)
+                    .invoke(sA2dp, d, want);
+        } catch (ReflectiveOperationException x) {
+            Log.w(TAG, "setCodecConfigPreference", x);
+            return err("failed", "Android refused the codec change");
+        }
+        notify("bt");
+        return ok();
+    }
+
+    // ------------------------------------------------------------------ about + USB (phase 2)
+    static Bundle about() {
+        Bundle b = ok();
+        b.putString("device", "HiBy R4");
+        b.putString("songateos", Updater.currentVersion());
+        b.putString("android", android.os.Build.VERSION.RELEASE);
+        b.putString("patch", android.os.Build.VERSION.SECURITY_PATCH);
+        b.putString("vendor_patch", Updater.sysprop("ro.vendor.build.security_patch", ""));
+        b.putString("build", android.os.Build.DISPLAY);
+        b.putString("kernel", System.getProperty("os.version", ""));
+        b.putString("recovery", Updater.sysprop("sys.hibyr4.ota_recovery", ""));
+        b.putString("service", versionName());
+        android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
+        sApp.getSystemService(android.app.ActivityManager.class).getMemoryInfo(mi);
+        b.putLong("ram", mi.totalMem);
+        Intent bat = sApp.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        if (bat != null) {
+            int lvl = bat.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1), scale = bat.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100);
+            if (lvl >= 0 && scale > 0) b.putInt("battery", lvl * 100 / scale);
+            int st = bat.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, 0);
+            b.putString("battery_status", st == android.os.BatteryManager.BATTERY_STATUS_CHARGING ? "charging"
+                    : st == android.os.BatteryManager.BATTERY_STATUS_FULL ? "full" : "discharging");
+            b.putInt("battery_temp", bat.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0));   // tenths of °C
+        }
+        return b;   // no serial number or other personal identifiers
+    }
+
+    private static String versionName() {
+        try { return sApp.getPackageManager().getPackageInfo(sApp.getPackageName(), 0).versionName; } catch (Throwable t) { return ""; }
+    }
+
+    // UsbManager.getCurrentFunctions / setCurrentFunctions and the FUNCTION_* constants are hidden: reflection.
+    private static final String[] USB_MODES = { "charge", "mtp", "ptp", "midi" };
+    private static final String[] USB_FIELDS = { "FUNCTION_NONE", "FUNCTION_MTP", "FUNCTION_PTP", "FUNCTION_MIDI" };
+    private static volatile boolean sUsbConnected;
+
+    private static long usbConst(String f) throws Exception { return android.hardware.usb.UsbManager.class.getField(f).getLong(null); }
+
+    static void onUsbState(Intent i) {
+        sUsbConnected = i.getBooleanExtra("connected", false);
+        notify("usb");
+    }
+
+    static Bundle usbGet() throws Exception {
+        android.hardware.usb.UsbManager um = sApp.getSystemService(android.hardware.usb.UsbManager.class);
+        long cur = (Long) android.hardware.usb.UsbManager.class.getMethod("getCurrentFunctions").invoke(um);
+        String mode = "charge";
+        for (int k = 1; k < USB_MODES.length; k++) if ((cur & usbConst(USB_FIELDS[k])) != 0) mode = USB_MODES[k];
+        Bundle b = ok();
+        b.putString("connected", sUsbConnected ? "1" : "0");
+        b.putString("mode", mode);
+        b.putStringArray("modes", USB_MODES);
+        return b;
+    }
+
+    static Bundle usbSet(String mode) throws Exception {
+        int k = java.util.Arrays.asList(USB_MODES).indexOf(mode == null ? "" : mode);
+        if (k < 0) return err("bad_arg", "charge, mtp, ptp or midi");
+        if (!sUsbConnected) return err("not_connected", "Connect the R4 to a computer first");
+        android.hardware.usb.UsbManager um = sApp.getSystemService(android.hardware.usb.UsbManager.class);
+        android.hardware.usb.UsbManager.class.getMethod("setCurrentFunctions", long.class).invoke(um, usbConst(USB_FIELDS[k]));
+        notify("usb");
+        return ok();
+    }
+
+    // ------------------------------------------------------------------ date & time (phase 2)
+    private static String zoneCity(String id, java.util.Locale loc) {
+        try {
+            String c = android.icu.text.TimeZoneNames.getInstance(loc).getExemplarLocationName(id);
+            if (c != null && !c.isEmpty()) return c;
+        } catch (Throwable ignored) { }
+        int slash = id.lastIndexOf('/');
+        return (slash >= 0 ? id.substring(slash + 1) : id).replace('_', ' ');
+    }
+    private static String zoneLong(String id, java.util.Locale loc) {
+        return java.util.TimeZone.getTimeZone(id).getDisplayName(false, java.util.TimeZone.LONG, loc);
+    }
+    private static boolean hour24() {
+        String v = Settings.System.getString(sApp.getContentResolver(), Settings.System.TIME_12_24);
+        if ("24".equals(v)) return true;
+        if ("12".equals(v)) return false;
+        return android.text.format.DateFormat.is24HourFormat(sApp);
+    }
+
+    static Bundle timeGet() {
+        java.util.Locale loc = sApp.getResources().getConfiguration().getLocales().get(0);
+        String zone = java.util.TimeZone.getDefault().getID();
+        Bundle b = ok();
+        b.putString("auto_time", Settings.Global.getInt(sApp.getContentResolver(), Settings.Global.AUTO_TIME, 1) != 0 ? "1" : "0");
+        b.putString("auto_zone", Settings.Global.getInt(sApp.getContentResolver(), Settings.Global.AUTO_TIME_ZONE, 1) != 0 ? "1" : "0");
+        b.putString("zone", zone);
+        b.putString("zone_name", zoneCity(zone, loc));
+        b.putString("zone_long", zoneLong(zone, loc));
+        b.putInt("offset", java.util.TimeZone.getTimeZone(zone).getOffset(System.currentTimeMillis()) / 60000);
+        b.putString("hour24", hour24() ? "1" : "0");
+        b.putString("hour24_auto", Settings.System.getString(sApp.getContentResolver(), Settings.System.TIME_12_24) == null ? "1" : "0");
+        b.putLong("now", System.currentTimeMillis());
+        return b;
+    }
+
+    static Bundle timeSet(String what, String value) {
+        if (value == null) return err("bad_arg", "value is missing");
+        android.content.ContentResolver cr = sApp.getContentResolver();
+        switch (what == null ? "" : what) {
+            case "auto_time": case "auto_zone": {
+                Boolean on = bool(value);
+                if (on == null) return err("bad_arg", "value must be 0 or 1");
+                Settings.Global.putInt(cr, "auto_time".equals(what) ? Settings.Global.AUTO_TIME : Settings.Global.AUTO_TIME_ZONE, on ? 1 : 0);
+                notify("time");
+                return ok();
+            }
+            case "hour24": {
+                Boolean on = "auto".equals(value) ? null : bool(value);
+                if (on == null && !"auto".equals(value)) return err("bad_arg", "value must be 0, 1 or auto");
+                Settings.System.putString(cr, Settings.System.TIME_12_24, on == null ? null : on ? "24" : "12");
+                if (on == null) on = android.text.format.DateFormat.is24HourFormat(sApp);
+                // what Android's Settings does, so the status bar clock switches at once
+                Intent i = new Intent(Intent.ACTION_TIME_CHANGED);
+                i.addFlags(Intent.FLAG_RECEIVER_REPLACE_PENDING | 0x01000000 /* FLAG_RECEIVER_INCLUDE_BACKGROUND, hidden */);
+                i.putExtra("android.intent.extra.TIME_PREF_24_HOUR_FORMAT", on ? 1 : 0);
+                sApp.sendBroadcast(i);
+                notify("time");
+                return ok();
+            }
+            case "zone": {
+                if (Settings.Global.getInt(cr, Settings.Global.AUTO_TIME_ZONE, 1) != 0)
+                    return err("auto_on", "Turn off the automatic time zone first");
+                if (!java.util.Arrays.asList(java.util.TimeZone.getAvailableIDs()).contains(value))
+                    return err("bad_arg", "Unknown time zone");
+                sApp.getSystemService(AlarmManager.class).setTimeZone(value);
+                notify("time");
+                return ok();
+            }
+            case "now": {
+                if (Settings.Global.getInt(cr, Settings.Global.AUTO_TIME, 1) != 0)
+                    return err("auto_on", "Turn off the automatic time first");
+                long ms;
+                try { ms = Long.parseLong(value); } catch (Exception e) { return err("bad_arg", "now must be milliseconds since 1970"); }
+                if (ms < 1704067200000L || ms > 4102444800000L) return err("bad_arg", "That date is out of range");
+                sApp.getSystemService(AlarmManager.class).setTime(ms);
+                notify("time");
+                return ok();
+            }
+        }
+        return err("bad_arg", "auto_time, auto_zone, zone, hour24 or now");
+    }
+
+    static Bundle zonesList(String search) {
+        java.util.Locale loc = sApp.getResources().getConfiguration().getLocales().get(0);
+        String q = search == null ? "" : search.trim().toLowerCase(loc);
+        long now = System.currentTimeMillis();
+        ArrayList<Bundle> list = new ArrayList<>();
+        for (String id : android.icu.util.TimeZone.getAvailableIDs(android.icu.util.TimeZone.SystemTimeZoneType.CANONICAL_LOCATION, null, null)) {
+            String name = zoneCity(id, loc), lng = zoneLong(id, loc);
+            if (!q.isEmpty() && !name.toLowerCase(loc).contains(q) && !lng.toLowerCase(loc).contains(q) && !id.toLowerCase(loc).contains(q)) continue;
+            Bundle z = new Bundle();
+            z.putString("id", id);
+            z.putString("name", name);
+            z.putString("long", lng);
+            z.putInt("offset", java.util.TimeZone.getTimeZone(id).getOffset(now) / 60000);
+            list.add(z);
+        }
+        list.sort((x, y) -> x.getInt("offset") != y.getInt("offset") ? Integer.compare(x.getInt("offset"), y.getInt("offset"))
+                : x.getString("name").compareToIgnoreCase(y.getString("name")));
+        Bundle b = ok();
+        b.putParcelableArrayList("zones", list);
+        return b;
+    }
+
+    // ------------------------------------------------------------------ storage (phase 2)
+    // StorageManager.getVolumes / mount / unmount and VolumeInfo / DiskInfo are hidden: reflection.
+    private static final String[] VOL_STATES = { "unmounted", "checking", "mounted", "mounted", "formatting", "ejecting",
+            "unmountable", "removed", "removed" };
+
+    private static List<?> volumes() throws Exception {
+        StorageManager sm = sApp.getSystemService(StorageManager.class);
+        return (List<?>) StorageManager.class.getMethod("getVolumes").invoke(sm);
+    }
+    private static Object field(Object o, String f) {
+        try { return o.getClass().getField(f).get(o); } catch (Throwable t) { return null; }
+    }
+
+    static Bundle storageGet() throws Exception {
+        Bundle b = ok();
+        ArrayList<Bundle> list = new ArrayList<>();
+        for (Object v : volumes()) {
+            int type = (Integer) field(v, "type");          // 0 public (SD/USB), 1 private (/data), 2 emulated
+            String id = (String) field(v, "id");
+            int state = (Integer) field(v, "state");
+            Bundle o = new Bundle();
+            String path;
+            if (type == 1 && "private".equals(id)) {
+                o.putString("id", "internal");
+                o.putString("kind", "internal");
+                o.putString("label", "Internal storage");
+                path = "/data";
+            } else if (type == 0) {
+                Object disk = call0(v, "getDisk");
+                boolean usb = disk != null && Boolean.TRUE.equals(call0(disk, "isUsb"));
+                o.putString("id", id);
+                o.putString("kind", usb ? "usb" : "sd");
+                String label = (String) call0(v, "getDescription");
+                Object fsLabel = field(v, "fsLabel");
+                o.putString("label", fsLabel instanceof String && !((String) fsLabel).isEmpty() ? (String) fsLabel
+                        : label != null ? label : usb ? "USB drive" : "microSD card");
+                Object fs = field(v, "fsType");
+                if (fs instanceof String) o.putString("fs", (String) fs);
+                Object p = field(v, "path");
+                path = p instanceof String ? (String) p : null;
+            } else continue;
+            o.putString("state", state >= 0 && state < VOL_STATES.length ? VOL_STATES[state] : "unmounted");
+            if (state == 2 || state == 3) {
+                try {
+                    StatFs f = new StatFs(path);
+                    o.putLong("total", f.getTotalBytes());
+                    o.putLong("free", f.getAvailableBytes());
+                } catch (Throwable ignored) { }
+            }
+            list.add(o);
+        }
+        b.putParcelableArrayList("volumes", list);
+        return b;
+    }
+
+    static Bundle storageMount(String id, boolean mount) throws Exception {
+        if (id == null || "internal".equals(id)) return err("bad_arg", "Only a microSD card or USB drive can do that");
+        for (Object v : volumes()) {
+            if (!id.equals(field(v, "id"))) continue;
+            if ((Integer) field(v, "type") != 0) return err("bad_arg", "Only a microSD card or USB drive can do that");
+            int state = (Integer) field(v, "state");
+            if (mount && (state == 2 || state == 3)) return ok();
+            if (!mount && state != 2 && state != 3) return ok();
+            StorageManager sm = sApp.getSystemService(StorageManager.class);
+            StorageManager.class.getMethod(mount ? "mount" : "unmount", String.class).invoke(sm, id);
+            notify("storage");
+            return ok();
+        }
+        return err("not_found", "That card or drive isn't there");
+    }
+
+    // ------------------------------------------------------------------ display (phase 2)
+    static final int[] TIMEOUTS = { 15, 30, 60, 120, 300, 600, 1800 };
+
+    // Android's brightness slider works in a perceptual ("gamma", HLG) scale; the backlight in a linear one. These are
+    // SystemUI's BrightnessUtils formulas, so a percentage here is the same position as on Android's own slider.
+    private static final float R = 0.5f, A = 0.17883277f, B = 0.28466892f, C = 0.55991073f;
+    private static float percentToLinear(float pct, float min, float max) {
+        float n = Math.max(0f, Math.min(1f, pct / 100f));
+        float r = n <= R ? (n / R) * (n / R) : (float) Math.exp((n - C) / A) + B;
+        return min + (max - min) * Math.max(0f, Math.min(12f, r)) / 12f;
+    }
+    private static float linearToPercent(float v, float min, float max) {
+        float n = max > min ? (v - min) / (max - min) * 12f : 0f;
+        float r = n <= 1f ? (float) Math.sqrt(Math.max(0f, n)) * R : A * (float) Math.log(n - B) + C;
+        return Math.max(0f, Math.min(1f, r)) * 100f;
+    }
+    /** min / max backlight (hidden PowerManager.getBrightnessConstraint), 0..1 when unknown. */
+    private static float[] brightnessRange() {
+        float min = 0f, max = 1f;
+        try {
+            PowerManager pm = sApp.getSystemService(PowerManager.class);
+            Method m = PowerManager.class.getMethod("getBrightnessConstraint", int.class);
+            min = (Float) m.invoke(pm, 0); max = (Float) m.invoke(pm, 1);
+        } catch (Throwable t) { Log.w(TAG, "brightness range", t); }
+        return new float[]{ min, max };
+    }
+    private static float brightnessNow() {
+        try {
+            DisplayManager dm = sApp.getSystemService(DisplayManager.class);
+            return (Float) DisplayManager.class.getMethod("getBrightness", int.class).invoke(dm, 0);
+        } catch (Throwable t) {
+            int v = Settings.System.getInt(sApp.getContentResolver(), Settings.System.SCREEN_BRIGHTNESS, 255);
+            return v / 255f;
+        }
+    }
+
+    static Bundle displayGet() {
+        float[] r = brightnessRange();
+        Bundle b = ok();
+        b.putInt("brightness", Math.round(linearToPercent(brightnessNow(), r[0], r[1])));
+        b.putInt("timeout", Settings.System.getInt(sApp.getContentResolver(), Settings.System.SCREEN_OFF_TIMEOUT, 60000) / 1000);
+        b.putIntArray("timeouts", TIMEOUTS);
+        return b;
+    }
+
+    static Bundle displaySet(String what, String value) throws Exception {
+        int n;
+        try { n = Integer.parseInt(value); } catch (Exception e) { return err("bad_arg", "value must be a number"); }
+        if ("brightness".equals(what)) {
+            if (n < 0 || n > 100) return err("bad_arg", "brightness must be 0 to 100");
+            float[] r = brightnessRange();
+            Settings.System.putInt(sApp.getContentResolver(), Settings.System.SCREEN_BRIGHTNESS_MODE,
+                    Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
+            DisplayManager dm = sApp.getSystemService(DisplayManager.class);
+            DisplayManager.class.getMethod("setBrightness", int.class, float.class).invoke(dm, 0, percentToLinear(n, r[0], r[1]));
+            notify("display");
+            return ok();
+        }
+        if ("timeout".equals(what)) {
+            boolean offered = false;
+            for (int t : TIMEOUTS) if (t == n) offered = true;
+            if (!offered) return err("bad_arg", "timeout must be one of the offered values");
+            Settings.System.putInt(sApp.getContentResolver(), Settings.System.SCREEN_OFF_TIMEOUT, n * 1000);
+            notify("display");
+            return ok();
+        }
+        return err("bad_arg", "brightness or timeout");
+    }
+
     // ------------------------------------------------------------------ audio output
     private static AudioManager audio() { return sApp.getSystemService(AudioManager.class); }
     private static SharedPreferences prefs() {
@@ -635,27 +1130,12 @@ final class SystemApi {
         return "";
     }
 
-    private static Object sA2dp;
-    private static void ensureA2dp() {
-        if (sA2dp != null || bt() == null) return;
-        bt().getProfileProxy(sApp, new BluetoothProfile.ServiceListener() {
-            @Override public void onServiceConnected(int p, BluetoothProfile proxy) { sA2dp = proxy; SystemApi.notify("output"); }
-            @Override public void onServiceDisconnected(int p) { sA2dp = null; }
-        }, BluetoothProfile.A2DP);
-    }
-
-    private static final String[] CODECS = { "sbc", "aac", "aptx", "aptx_hd", "ldac", "lc3", "opus" };
-
     private static String codec(String address) {
-        ensureA2dp();
-        if (sA2dp == null) return null;
+        BluetoothA2dp p = sA2dp;
+        if (p == null) { connectA2dp(); return null; }
         try {
-            BluetoothDevice d = bt().getRemoteDevice(address);
-            Object st = sA2dp.getClass().getMethod("getCodecStatus", BluetoothDevice.class).invoke(sA2dp, d);
-            if (st == null) return null;
-            Object cfg = st.getClass().getMethod("getCodecConfig").invoke(st);
-            int type = (Integer) cfg.getClass().getMethod("getCodecType").invoke(cfg);
-            return type >= 0 && type < CODECS.length ? CODECS[type] : null;
+            BluetoothCodecStatus st = codecStatus(p, bt().getRemoteDevice(address));
+            return st == null || st.getCodecConfig() == null ? null : codecName(st.getCodecConfig().getCodecType());
         } catch (Throwable t) { return null; }
     }
 

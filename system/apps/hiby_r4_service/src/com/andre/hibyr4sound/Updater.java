@@ -604,7 +604,7 @@ public final class Updater {
         try {
             int code = con.getResponseCode();
             if (code == 403 || code == 429) throw new IOException("GitHub rate limit, try again later");
-            if (code == 404) throw new IOException("release list not found (repository private?)");
+            if (code == 404) throw new IOException("No SongateOS release published yet");
             if (code != 200) throw new IOException("HTTP " + code);
             StringBuilder s = new StringBuilder();
             try (BufferedReader r = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8))) {
