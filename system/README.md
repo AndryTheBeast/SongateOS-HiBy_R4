@@ -55,3 +55,10 @@ Apps (Songate) read and change the R4's sound and light settings through `conten
 (permission `com.andre.hibyr4.permission.HIBY_SETTINGS`): keys for gain, filter, balance, outputs, LEDs, volume
 steps, `out_rate`, `bit_perfect`, and status values such as `st_rate` (the DAC's rate) and `st_quality`
 (PCM / DSD / MQA).
+
+## The system settings API (design)
+
+Songate's own pages for Wi-Fi, Bluetooth, the audio output switcher, display, storage, date & time, language and the
+system (update, restart) will use a second part of the same provider, locked to Songate's signing certificate:
+[`apps/hiby_r4_service/SYSTEM_API.md`](apps/hiby_r4_service/SYSTEM_API.md). It's a design; the service side is built
+phase by phase.
