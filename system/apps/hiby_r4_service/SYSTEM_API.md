@@ -1,7 +1,10 @@
-# SongateOS system settings API (design v1, 2026-11-16, NOT implemented yet)
+# SongateOS system settings API (v1, 2026-11-16)
 
-The system settings Songate shows in its own UI (Wi-Fi, Bluetooth, audio output, display, storage, time, language,
-system) are
+**Status:** phase 1 (permission, `sys_info`, Wi-Fi, Bluetooth, audio output, system colours, `power`, OTA for
+Songate) is implemented in HiBy R4 service v31 and tested on the R4 with Songate. Phase 2 and 3 are still design.
+
+The system settings Songate shows in its own UI (Wi-Fi, Bluetooth, audio output, system colours, display, storage,
+time, language, system) are
 done by the **HiBy R4 service** (`com.andre.hibyr4.service`, platform-signed, system uid). Normal apps aren't allowed
 to do most of this on Android 14 (turn Wi-Fi on/off, join and save networks, Bluetooth on/off and codec, time,
 language, USB mode). Songate draws the pages; the service does the work.
@@ -33,7 +36,7 @@ New: a **stronger permission** for everything here, and **change notifications**
   reinstall it once.
 - **Check what this system offers:**
   - `sys_info` → `api` (Int, 1 for this version) and `caps` (String[]: `wifi`, `bt`, `bt_codec`, `output`,
-    `display`, `storage`, `time`, `lang`, `power`, `ota`, `usb`, `about`);
+    `theme`, `display`, `storage`, `time`, `lang`, `power`, `ota`, `usb`, `about`);
   - plus `songateos` (version, `0.0.0` on the GSI) and `ready` (the module service is running).
   - Songate shows a page only when its cap is listed; otherwise it offers Android's page as a fallback.
 
@@ -49,6 +52,7 @@ The service calls `notifyChange` on these URIs when the state changes, whoever c
 | `content://com.andre.hibyr4.settings/system/wifi` | on/off, scan results, connecting / connected / failed, saved list |
 | `…/system/bt` | on/off, discovery results, bond and connection changes, codec |
 | `…/system/output` | an output appears or disappears (plug in / out, Bluetooth or USB DAC connects), the active output changes, its codec or bit-perfect state changes |
+| `…/system/theme` | the system colour or dark / light changed |
 | `…/system/display` | brightness, timeout |
 | `…/system/storage` | card inserted / ejected / mounted |
 | `…/system/time` | zone, auto time, 24-hour |
@@ -136,6 +140,31 @@ What's listed and how it behaves:
 - **One output for everything:** switching moves all media, not only Songate's. Songate's own player follows the
   system output, the same as with Android's switcher.
 
+### System colours (cap `theme`)
+
+The colours of the parts Android still draws on SongateOS: the status bar, notifications and quick settings, Android's
+dialogs and the pages under "Advanced". Songate's own interface keeps its colours (Appearance › Interface colours).
+
+| method | arg | extras | returns |
+|---|---|---|---|
+| `theme_get` | – | – | `colour` (`#rrggbb` in use), `default` (`#fb695a`, the boot animation's coral), `dark` ("0"/"1"), `exact` ("0"/"1": the exact palette below is on) |
+| `theme_set` | – | `colour` (`#rrggbb`, or `default`), `dark` ("0"/"1"): one or both | `ok` |
+
+- **First boot:** coral `#fb695a` (the boot animation's), dark.
+- **Any colour works,** but very dark or very light ones give grey system colours.
+- **Dark / light follows Songate:** Songate sends `dark` whenever its own Appearance brightness changes, so the
+  system is always dark or light with it. There's no separate switch for the system.
+- **A change restarts open screens:** Android re-colours every app's open screens by restarting them once, Songate
+  included. So `theme_set` is for a user's choice, never for following the cover. Songate must come back to where it
+  was.
+- **Implementation:** the service writes Android's colour setting (`THEME_CUSTOMIZATION_OVERLAY_PACKAGES`: the colour,
+  palette style `TONAL_SPOT`, colour source `preset`) and Android's night mode. These names stay inside the service;
+  the user never sees them.
+- **Exact palette:** on top of that, the service generates the whole system palette from the colour (for coral, the
+  boot animation's own table with its black `#140809`; other colours through OKLCH) and registers it as a fabricated
+  overlay on `android`, re-registered at every boot and kept highest. `Settings.Global songateos_exact_palette` = 0
+  turns it off (then only Android's Monet colours apply).
+
 ### Display (cap `display`)
 
 | method | arg | extras | returns |
@@ -204,6 +233,7 @@ There's no device serial number in `about` (personal identifier).
 | Wi-Fi | `WifiManager.setWifiEnabled`, `startScan`/`getScanResults`, and the system APIs `connect(WifiConfiguration, listener)`, `forget`, `getPrivilegedConfiguredNetworks` |
 | Bluetooth | `BluetoothAdapter`/`BluetoothDevice`, `BluetoothA2dp` codec calls (`getCodecStatus`, `setCodecConfigPreference`) |
 | Output | `AudioManager.getDevices(GET_DEVICES_OUTPUTS)`, `getDevicesForAttributes(USAGE_MEDIA)` (active), `setPreferredDeviceForStrategy` / `removePreferredDeviceForStrategy` on the media strategy (`MODIFY_AUDIO_ROUTING`), `AudioDeviceCallback` for changes. **Test on the R4:** wired chosen while Bluetooth stays connected (the module must still send HiBy's `connect=8;<Name>`); switching while bit-perfect is playing; DAC volume (`DacVolume`) handover between wired and Bluetooth |
+| Theme | `Settings.Secure.THEME_CUSTOMIZATION_OVERLAY_PACKAGES` JSON (`android.theme.customization.system_palette` = `#rrggbb`, `…theme_style` = `TONAL_SPOT`, `…color_source` = `preset`, read by SystemUI `ThemeOverlayController`); `UiModeManager.setNightModeActivated` / night mode `yes`/`no`. First-boot default written once by the service when the setting is empty |
 | Time | `AlarmManager.setTimeZone`/`setTime`; `Settings.Global.AUTO_TIME*` |
 | Language | `LocalePicker.updateLocales` |
 | Storage | `StorageManager.mount`/`unmount` |
@@ -221,7 +251,8 @@ There's no device serial number in `about` (personal identifier).
 
 ## 6. Phases
 
-1. Permission, `sys_info`, Wi-Fi, Bluetooth (without codec), audio output switcher, `power`, OTA access for Songate.
+1. Permission, `sys_info`, Wi-Fi, Bluetooth (without codec), audio output switcher, system colours, `power`, OTA
+   access for Songate.
 2. Bluetooth codec, display, storage, date & time, language, `about`, USB.
 3. Pairing confirmation inside Songate (instead of Android's dialog); a theme overlay so the remaining Android screens
    (permission prompts, installer, Advanced) use Songate's colours and fonts.

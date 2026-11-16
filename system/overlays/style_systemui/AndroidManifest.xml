@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SongateOS style, SystemUI part: quick-settings tiles, notification cards, the power menu and the shade's footer get
+     Songate's card corners; the default tile list is the one for a music player. Static, always on.
+     Part of the "SongateOS style" bundle (work/SONGATEOS_SURFACES.md). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="me.andre.hibyr4.overlay.style.systemui">
+    <overlay android:targetPackage="com.android.systemui" android:isStatic="true" android:priority="992" />
+    <application android:hasCode="false" />
+</manifest>

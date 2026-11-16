@@ -22,5 +22,7 @@ public class App extends Application {
         LineOut.start(this);   // 3.5 mm line out: fixed volume while on, reset when the plug is pulled
         DacVolume.start(this); // wired volume in the DAC (bit-perfect support), see DacVolume
         Lights.start(this);    // colour LED + white back light in LED mode "custom" (notifications, battery, quality, beat)
+        SystemTheme.start(this); // SongateOS system colours: the exact palette on top of Android's (see SystemTheme)
+        SystemApi.start(this);   // SongateOS system API for Songate: Wi-Fi, Bluetooth, output, power (see SystemApi)
     }
 }

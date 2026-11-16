@@ -122,6 +122,8 @@ public class HiBySettingsProvider extends ContentProvider {
     @Override
     public Bundle call(String method, String arg, Bundle extras) {
         enforce();
+        Bundle sys = SystemApi.call(getContext(), method, arg, extras);   // sys_info, wifi_*, bt_*, output_*, power
+        if (sys != null) return sys;
         switch (method) {
             case "get":
                 return all();
@@ -160,16 +162,16 @@ public class HiBySettingsProvider extends ContentProvider {
             case "ota_check":
                 return result(Updater.checkAsync(getContext(), true, null), null);
             case "ota_download": {
-                if (!fromSystem()) return result(false, "only Settings may download updates");
+                if (!fromSystem()) return result(false, "no_permission: Only Songate can change system settings");
                 String err = Updater.downloadAsync(getContext());
                 return result(err == null, err);
             }
             case "ota_cancel":
-                if (!fromSystem()) return result(false, "only Settings may cancel");
+                if (!fromSystem()) return result(false, "no_permission: Only Songate can change system settings");
                 Updater.cancel();
                 return result(true, null);
             case "ota_install": {
-                if (!fromSystem()) return result(false, "only Settings may install updates");
+                if (!fromSystem()) return result(false, "no_permission: Only Songate can change system settings");
                 String err = Updater.installAsync(getContext());
                 return result(err == null, err);
             }
@@ -177,13 +179,23 @@ public class HiBySettingsProvider extends ContentProvider {
                 String err = Updater.preflight(getContext());
                 return result(err == null, err);
             }
+            // ---- System colours (SYSTEM_API.md "System colours"). theme_set will move to the SYSTEM_SETTINGS permission
+            // (Songate's certificate) with the rest of the system API; until then only Settings / the system may set.
+            case "theme_get":
+                return SystemTheme.get(getContext());
+            case "theme_set": {
+                if (!fromSystem()) return result(false, "no_permission: Only Songate can change system settings");
+                String err = SystemTheme.set(getContext(), extras == null ? null : extras.getString("colour"),
+                        extras == null ? null : extras.getString("dark"));
+                return result(err == null, err);
+            }
             case "reboot": {   // arg: system | recovery | recovery_check (recovery records itself and comes back)
-                if (!fromSystem()) return result(false, "only Settings may restart the R4");
+                if (!fromSystem()) return result(false, "no_permission: Only Songate can change system settings");
                 String err = Updater.rebootAsync(getContext(), arg);
                 return result(err == null, err);
             }
             case "ota_set": {
-                if (!fromSystem()) return result(false, "only Settings may change update options");
+                if (!fromSystem()) return result(false, "no_permission: Only Songate can change system settings");
                 String v = extras == null ? null : extras.getString("value");
                 return result(Updater.set(getContext(), arg, v), null);
             }
@@ -191,7 +203,8 @@ public class HiBySettingsProvider extends ContentProvider {
         return result(false, "unknown method " + method);
     }
 
-    private static boolean fromSystem() { return android.os.Binder.getCallingUid() == android.os.Process.SYSTEM_UID; }
+    /** Settings / the system, or Songate through the SYSTEM_SETTINGS permission (its certificate). */
+    private boolean fromSystem() { return SystemApi.trusted(getContext()); }
 
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {

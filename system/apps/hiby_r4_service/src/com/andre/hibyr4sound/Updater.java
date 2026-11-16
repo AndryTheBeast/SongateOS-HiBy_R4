@@ -114,6 +114,7 @@ public final class Updater {
         if (error != null) e.putString("error", error); else e.remove("error");
         e.apply();
         Log.i(TAG, "state " + s + (error != null ? ": " + error : ""));
+        SystemApi.notify("ota");   // Songate's update page listens on content://…/system/ota
     }
 
     static Bundle status(Context c) {
@@ -370,10 +371,13 @@ public final class Updater {
         try (InputStream in = con.getInputStream(); OutputStream o = new FileOutputStream(part, append)) {
             byte[] buf = new byte[1 << 16];
             int n;
+            long told = 0;
             while (!sCancel && (n = in.read(buf)) > 0) {
                 o.write(buf, 0, n);
                 have += n;
                 sProgress = have;
+                long now = android.os.SystemClock.elapsedRealtime();
+                if (now - told >= 1000) { told = now; SystemApi.notify("ota"); }   // progress for Songate, once a second
             }
         } finally {
             con.disconnect();

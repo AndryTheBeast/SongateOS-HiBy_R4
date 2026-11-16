@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Inter for body text and headlines. Inter has no 500 weight in Songate's set: "inter-medium" is SemiBold (600),
+     the weight Songate itself uses for medium text (Weight::SemiBold). -->
+<resources>
+    <string name="config_bodyFontFamily" translatable="false">inter</string>
+    <string name="config_bodyFontFamilyMedium" translatable="false">inter-medium</string>
+    <string name="config_headlineFontFamily" translatable="false">inter</string>
+    <string name="config_headlineFontFamilyMedium" translatable="false">inter-medium</string>
+</resources>

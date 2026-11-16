@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Songate's signing certificates (SHA-256, work/SONGATE_CERTS.md), for the SYSTEM_SETTINGS permission
+         (signature|knownSigner). Release = the key SongateOS ships; debug = dev builds on the developer's PC.
+         The SongateOS release image keeps only the release certificate. -->
+    <string-array name="songate_certs" translatable="false">
+        <item>4ead4fd16bd676de729264f75dcf56dfb785e7afb397bfe52b088f22cdcace04</item>
+        <item>10b4056630f86b8d83a0d9221766edb35d4992ea7e24d5d9a47cc9c7c66b2b00</item>
+    </string-array>
+</resources>

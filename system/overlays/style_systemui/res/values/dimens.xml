@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Songate's card corner on the R4 = 16dp (see the framework part). SystemUI's defaults: 28dp.
+     The round buttons at the bottom of the shade (settings, power: qs_footer_action_corner_radius) stay round,
+     like Songate's own icon buttons. -->
+<resources>
+    <dimen name="qs_corner_radius">16dp</dimen>
+    <dimen name="notification_corner_radius">16dp</dimen>
+    <dimen name="global_actions_corner_radius">16dp</dimen>
+    <dimen name="qs_security_footer_corner_radius">16dp</dimen>
+</resources>

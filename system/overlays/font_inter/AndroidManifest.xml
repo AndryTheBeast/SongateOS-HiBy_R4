@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SongateOS: Inter (Songate's font) as the system font. Built like LineageOS's own font overlays
+     (packages/overlays/Lineage/fonts/FontLatoOverlay): a theme overlay in Android's "font" category, switched on through
+     Settings.Secure theme_customization_overlay_packages ("android.theme.customization.font"), the same setting as the
+     system colour. Needs the "inter" family from /product/etc/fonts_customization.xml. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="me.andre.hibyr4.overlay.font.inter"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <overlay
+        android:targetPackage="android"
+        android:category="android.theme.customization.font"
+        android:priority="1" />
+
+    <application
+        android:hasCode="false"
+        android:label="@string/font_inter_overlay">
+        <meta-data
+            android:name="android.theme.customization.REQUIRED_SYSTEM_FONTS"
+            android:value="inter,inter-medium" />
+    </application>
+</manifest>

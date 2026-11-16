@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Songate's card corner on the R4: ~29 px at density 288 (1dp = 1.8 px) = 16dp. Android's default: 28dp / 16dp. -->
+<resources>
+    <dimen name="config_dialogCornerRadius">16dp</dimen>
+    <dimen name="config_bottomDialogCornerRadius">16dp</dimen>
+</resources>

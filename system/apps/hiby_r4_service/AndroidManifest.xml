@@ -10,7 +10,22 @@
         android:description="@string/perm_desc"
         android:protectionLevel="normal" />
 
+    <!-- SongateOS system API (SystemApi.java, SYSTEM_API.md): only for Songate (its certificates) and platform apps -->
+    <permission android:name="com.andre.hibyr4.permission.SYSTEM_SETTINGS"
+        android:label="@string/sys_perm_label"
+        android:description="@string/sys_perm_desc"
+        android:protectionLevel="signature|knownSigner"
+        android:knownCerts="@array/songate_certs" />
+
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- system API: Wi-Fi, Bluetooth, audio output (all held by the system uid; listed for clarity) -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.NETWORK_SETTINGS" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_PRIVILEGED" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_ROUTING" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -21,6 +36,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REBOOT" />
     <uses-permission android:name="android.permission.RECOVERY" />
+    <!-- SongateOS system colours (SystemTheme): the palette overlay, Android's colour setting, dark / light -->
+    <uses-permission android:name="android.permission.CHANGE_OVERLAY_PACKAGES" />
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <uses-permission android:name="android.permission.MODIFY_DAY_NIGHT_MODE" />
 
     <application
         android:label="@string/app_name"

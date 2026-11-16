@@ -26,7 +26,7 @@ cp -r apps/hiby_r4_service/res "$W/svc/res"; mkdir -p "$W/svc/res/raw"
 (cd ota/keys && zip -q -X "$HERE/$W/svc/res/raw/otacerts.zip" songateos_release.x509.pem)
 "$BT/aapt2" compile --dir "$W/svc/res" -o "$W/svc/c/"
 "$BT/aapt2" link -o "$W/svc/base.apk" -I "$AJ" --manifest apps/hiby_r4_service/AndroidManifest.xml --min-sdk-version 30 \
-  --target-sdk-version 34 --version-code 25 --version-name 25.0 --java "$W/svc/gen" "$W"/svc/c/*.flat
+  --target-sdk-version 34 --version-code 31 --version-name 31.0 --java "$W/svc/gen" "$W"/svc/c/*.flat
 javac --release 11 -Xlint:-options -classpath "$AJ" -d "$W/svc/cls" $(find apps/hiby_r4_service/src "$W/svc/gen" -name '*.java')
 "$BT/d8" --lib "$AJ" --min-api 30 --output "$W/svc/dex" $(find "$W/svc/cls" -name '*.class')
 cp "$W/svc/base.apk" "$W/svc/u.apk"; (cd "$W/svc/dex" && zip -q ../u.apk classes.dex)
@@ -48,14 +48,24 @@ else
   echo "SETTINGS_APK not set: Settings pages skipped"
 fi
 
-# Overlays: no voice/SMS, black FallbackHome, black default wallpaper
-for o in novoice:HiByR4NoVoice fallbackhome:HiByR4FallbackHome blackwallpaper:HiByR4BlackWallpaper; do
+# Overlays: no voice/SMS, black FallbackHome, black default wallpaper, and the SongateOS look: Inter as the system
+# font (a theme "font" overlay, switched on by the service's system colours), Songate's card corners on Android's
+# dialogs and on SystemUI (tiles, notifications, power menu) plus the player tile list
+for o in novoice:HiByR4NoVoice fallbackhome:HiByR4FallbackHome blackwallpaper:HiByR4BlackWallpaper \
+         font_inter:HiByR4FontInter style_android:HiByR4StyleAndroid style_systemui:HiByR4StyleSystemUI; do
   d=${o%%:*}; n=${o##*:}; mkdir -p "$W/ov_$d/c"
   "$BT/aapt2" compile --dir overlays/$d/res -o "$W/ov_$d/c/"
   "$BT/aapt2" link -o "$W/ov_$d/u.apk" -I "$AJ" --manifest overlays/$d/AndroidManifest.xml --min-sdk-version 30 \
     --target-sdk-version 34 "$W"/ov_$d/c/*.flat
   mkdir -p "$OUT/system/product/overlay"; sign "$W/ov_$d/u.apk" "$OUT/system/product/overlay/$n.apk"
 done
+
+# Inter (Songate's font, OFL) as a named system font family: the files + LineageOS's own fonts_customization.xml
+# (Lato, Rubik) with the "inter" family added; the font_inter overlay above points the system font at it
+mkdir -p "$OUT/system/product/fonts" "$OUT/system/product/etc"
+for f in Inter-Regular Inter-SemiBold Inter-Bold Inter-ExtraBold; do cp ../branding/fonts/Inter/$f.ttf "$OUT/system/product/fonts/"; done
+cp ../branding/fonts/Inter/OFL.txt "$OUT/system/product/fonts/OFL-Inter.txt"
+cp overlays/font_inter/fonts_customization.xml "$OUT/system/product/etc/fonts_customization.xml"
 
 # Master volume helper (Bluetooth fix), run by service.sh with app_process
 mkdir -p "$W/mv/cls" "$W/mv/dex"
