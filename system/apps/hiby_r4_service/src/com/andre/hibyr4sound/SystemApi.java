@@ -61,7 +61,7 @@ final class SystemApi {
     static final String PERM = "com.andre.hibyr4.permission.SYSTEM_SETTINGS";
     static final String BASE = "content://com.andre.hibyr4.settings/system/";
     static final int API = 1;
-    static final String[] CAPS = { "wifi", "bt", "bt_codec", "display", "earbuds", "output", "storage", "time", "about", "usb", "theme", "power", "ota" };
+    static final String[] CAPS = { "wifi", "bt", "bt_codec", "display", "earbuds", "output", "storage", "time", "about", "usb", "hold", "theme", "power", "ota" };
 
     private static Context sApp;
     private static Handler sH;
@@ -160,8 +160,16 @@ final class SystemApi {
     /** Returns null when the method isn't part of the system API (the provider goes on with its own methods). */
     static Bundle call(Context c, String method, String arg, Bundle extras) {
         if ("sys_info".equals(method)) return sysInfo();
+        if ("hold_switch".equals(method)) {   // from the module's hold_switch.sh only (root)
+            if (Binder.getCallingUid() != 0) return err("no_permission", "Only the system can report the hold switch");
+            return HoldSwitch.onSwitch(arg, extras != null && "1".equals(extras.getString("boot")));
+        }
+        if ("hold_key".equals(method)) {      // from the module's hold_switch.sh only (root)
+            if (Binder.getCallingUid() != 0) return err("no_permission", "Only the system can pass on hold keys");
+            return HoldSwitch.onKey(arg);
+        }
         boolean ours = method.startsWith("wifi_") || method.startsWith("bt_") || method.startsWith("output_")
-                || method.startsWith("display_") || method.startsWith("earbuds_") || method.startsWith("storage_") || method.startsWith("time_") || method.startsWith("usb_") || method.equals("about") || method.equals("zones_list") || method.equals("power");
+                || method.startsWith("display_") || method.startsWith("earbuds_") || method.startsWith("storage_") || method.startsWith("time_") || method.startsWith("usb_") || method.startsWith("hold_") || method.equals("about") || method.equals("zones_list") || method.equals("power");
         if (!ours) return null;
         if (!trusted(c)) return err("no_permission", "Only Songate can change system settings");
         String v = extras == null ? null : extras.getString("value");
@@ -180,7 +188,15 @@ final class SystemApi {
                 case "bt_codec_get": return btCodecGet(arg);
                 case "bt_codec_set": return btCodecSet(arg, extras);
                 case "earbuds_get": { Bundle[] e = new Bundle[1]; BluetoothDevice d = a2dpDevice(arg, e); return d == null ? e[0] : Earbuds.get(d); }
+                case "earbuds_dev_ble": return AirPodsProbe.bleScan(10000);   // development only
+                case "earbuds_dev_aap": {                                       // development only
+                    BluetoothAdapter ad = bt();
+                    if (ad == null || arg == null || !BluetoothAdapter.checkBluetoothAddress(arg)) return err("bad_arg", "Not a Bluetooth address");
+                    return AirPodsProbe.aapProbe(ad.getRemoteDevice(arg));
+                }
                 case "earbuds_set": { Bundle[] e = new Bundle[1]; BluetoothDevice d = a2dpDevice(arg, e); return d == null ? e[0] : Earbuds.set(d, extras); }
+                case "hold_get": return HoldSwitch.get();
+                case "hold_set": return HoldSwitch.set(extras);
                 case "about": return about();
                 case "usb_get": return usbGet();
                 case "usb_set": return usbSet(arg);
@@ -970,7 +986,7 @@ final class SystemApi {
     }
 
     // ------------------------------------------------------------------ display (phase 2)
-    static final int[] TIMEOUTS = { 15, 30, 60, 120, 300, 600, 1800 };
+    static final int[] TIMEOUTS = { 15, 30, 60, 120, 300, 600, 1800, 0 };   // 0 = never
 
     // Android's brightness slider works in a perceptual ("gamma", HLG) scale; the backlight in a linear one. These are
     // SystemUI's BrightnessUtils formulas, so a percentage here is the same position as on Android's own slider.
@@ -1009,7 +1025,8 @@ final class SystemApi {
         float[] r = brightnessRange();
         Bundle b = ok();
         b.putInt("brightness", Math.round(linearToPercent(brightnessNow(), r[0], r[1])));
-        b.putInt("timeout", Settings.System.getInt(sApp.getContentResolver(), Settings.System.SCREEN_OFF_TIMEOUT, 60000) / 1000);
+        int ms = Settings.System.getInt(sApp.getContentResolver(), Settings.System.SCREEN_OFF_TIMEOUT, 60000);
+        b.putInt("timeout", ms == Integer.MAX_VALUE || ms < 0 ? 0 : ms / 1000);   // 0 = never (Android stores Integer.MAX_VALUE)
         b.putIntArray("timeouts", TIMEOUTS);
         return b;
     }
@@ -1031,7 +1048,7 @@ final class SystemApi {
             boolean offered = false;
             for (int t : TIMEOUTS) if (t == n) offered = true;
             if (!offered) return err("bad_arg", "timeout must be one of the offered values");
-            Settings.System.putInt(sApp.getContentResolver(), Settings.System.SCREEN_OFF_TIMEOUT, n * 1000);
+            Settings.System.putInt(sApp.getContentResolver(), Settings.System.SCREEN_OFF_TIMEOUT, n == 0 ? Integer.MAX_VALUE : n * 1000);
             notify("display");
             return ok();
         }

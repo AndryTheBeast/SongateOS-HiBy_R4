@@ -24,5 +24,6 @@ public class App extends Application {
         Lights.start(this);    // colour LED + white back light in LED mode "custom" (notifications, battery, quality, beat)
         SystemTheme.start(this); // SongateOS system colours: the exact palette on top of Android's (see SystemTheme)
         SystemApi.start(this);   // SongateOS system API for Songate: Wi-Fi, Bluetooth, output, power (see SystemApi)
+        HoldSwitch.start(this);  // hold switch on top of the R4: button locks, sleep when locked (see HoldSwitch)
     }
 }

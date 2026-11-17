@@ -1,6 +1,6 @@
 # SongateOS system settings API (v1, 2026-11-16)
 
-**Status:** phase 1 implemented in HiBy R4 service v31 and tested with Songate. Phase 2: Bluetooth codec in v32, display in v33, earbuds controls (Soundcore Liberty 4 NC) in v35, storage in v36, date & time in v37, about + USB in v38.
+**Status:** phase 1 implemented in HiBy R4 service v31 and tested with Songate. Phase 2: Bluetooth codec in v32, display in v33, earbuds controls (Soundcore Liberty 4 NC) in v35, storage in v36, date & time in v37, about + USB in v38, hold switch in v45.
 **Not in Songate (user decision 2026-11-16):** date & time and language stay in Android's own Settings. The time
 methods exist in the service but Songate doesn't need them; the language methods are not implemented.
 
@@ -59,6 +59,7 @@ The service calls `notifyChange` on these URIs when the state changes, whoever c
 | `…/system/storage` | card inserted / ejected / mounted |
 | `…/system/time` | zone, auto time, 24-hour |
 | `…/system/usb` | cable, USB mode |
+| `…/system/hold` | hold switch flipped, hold settings changed |
 | `…/system/ota` | update state (see the OTA methods in the HiBy API) |
 
 ## 3. Methods
@@ -209,11 +210,33 @@ Notes:
   - `failed` (no answer within 6 s).
 - No serial numbers or raw data are passed on.
 
+### Hold switch (cap `hold`, service v45)
+
+The switch on top of the R4 locks the player's own buttons. The settings below decide what it locks.
+
+| method | arg | extras | returns |
+|---|---|---|---|
+| `hold_get` | – | – | `locked` ("0"/"1": the switch's position now), `level`, `levels` (String[]), `sleep` ("0"/"1") |
+| `hold_set` | – | `level` and/or `sleep` (Strings) | the same fields as `hold_get` |
+
+- `level`:
+  - `media`: play/pause, previous and next locked; volume and power still work;
+  - `volume` (default): media and volume locked; power still turns the screen on and off;
+  - `all`: every button on the R4 locked, until the switch is unlocked.
+- `sleep` (default "1"): the screen turns off when the switch is locked, and back on when it's unlocked.
+- Only the R4's own buttons. A wired headphone remote and Bluetooth buttons always work.
+- While locked, buttons that are still allowed react with a short delay on the current system (about 0.5–1 s). The
+  SongateOS image removes the delay.
+- The long press on power (power menu) doesn't work while locked.
+- At start-up the switch's position is known only after its first flip. Until then `locked` is "0".
+- Observer `…/system/hold`: fires on every flip and every `hold_set`.
+- Errors: `bad_arg` ("level must be media, volume or all", "sleep must be 0 or 1").
+
 ### Display (cap `display`)
 
 | method | arg | extras | returns |
 |---|---|---|---|
-| `display_get` | – | – | `brightness` 0–100, `timeout` (seconds), `timeouts` (Int[] offered: 15, 30, 60, 120, 300, 600, 1800) |
+| `display_get` | – | – | `brightness` 0–100, `timeout` (seconds), `timeouts` (Int[] offered: 15, 30, 60, 120, 300, 600, 1800, 0); `0` = never |
 | `display_set` | `brightness` / `timeout` | `value` | `ok` |
 
 There's no automatic brightness: the R4 has no light sensor that Android uses.
@@ -224,6 +247,8 @@ There's no automatic brightness: the R4 has no light sensor that Android uses.
 - **Brightness percent = the position on Android's own brightness slider** (perceptual scale, not linear backlight).
   So 50 looks like the middle of the quick settings slider. 0 is the dimmest the screen allows, not off.
 - Setting brightness also switches Android to manual brightness (nothing else on the R4 changes it).
+- **Never** (service v41): timeout `0` means the screen never turns off by itself (Android stores it as
+  `Integer.MAX_VALUE`, like its own "Never"). Songate's sleep timer and dimming are separate and keep working.
 - `…/system/display` fires for changes from anywhere, the quick settings slider included. While the user drags
   Songate's slider, send values as it moves; the observer is coalesced to one notification per 300 ms.
 - Errors: `bad_arg` ("brightness must be 0 to 100", "timeout must be one of the offered values", "value must be a
