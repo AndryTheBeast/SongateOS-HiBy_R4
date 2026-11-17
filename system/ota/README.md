@@ -118,3 +118,21 @@ Upload `songateos-1.0.0-R4.zip` and `SHA256SUMS.txt` to a GitHub release tagged 
   `"recovery-update"` for installs ("System update" screen) and LineageOS's `rebootCustom("recovery")` for visits.
 - **Diagnostics:** while an update runs, the hook copies the recovery log, its own log and the installer trace to
   `/metadata/songateos/`. The installer also leaves `songateos_install.log` next to the zip on the microSD.
+
+## Recovery packages (recovery switch)
+
+Users switch between TWRP and OrangeFox from the update page; the HiBy R4 service fetches a **recovery package** from
+the releases, checks it, and its root helper writes both recovery slots.
+
+```
+make_recovery_package.sh --kind twrp --img <TWRP recovery.img> --version 2026.11.16 --key <key folder> --out <dir>
+make_recovery_package.sh --kind orangefox --img <OrangeFox recovery.img> --version 2026.11.16 --key <key folder> --out <dir>
+```
+
+- Output: `songateos-recovery-<kind>-<version>.zip`, signed whole-file with the release key like the updates.
+  Attach it to a release, with its line in `SHA256SUMS.txt`. The service uses the newest package of each kind across
+  the releases.
+- Contents: `recovery.img`, its `sha256`, and `recovery.prop` (kind, name, title, version, update-hook version).
+- The same zip can be flashed by hand from TWRP or OrangeFox (`recovery-update-binary`). It checks it's a standard R4
+  and that the image is intact, writes `recovery_a` and `recovery_b`, and reads them back.
+- `--hook`: the SongateOS update hook version inside that recovery (`runatboot.sh` `HOOK_VERSION`, 2 today).

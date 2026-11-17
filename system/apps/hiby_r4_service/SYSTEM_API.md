@@ -1,6 +1,6 @@
 # SongateOS system settings API (v1, 2026-11-16)
 
-**Status:** phase 1 implemented in HiBy R4 service v31 and tested with Songate. Phase 2: Bluetooth codec in v32, display in v33, earbuds controls (Soundcore Liberty 4 NC) in v35, storage in v36, date & time in v37, about + USB in v38, hold switch in v45.
+**Status:** phase 1 implemented in HiBy R4 service v31 and tested with Songate. Phase 2: Bluetooth codec in v32, display in v33, earbuds controls (Soundcore Liberty 4 NC) in v35, storage in v36, date & time in v37, about + USB in v38, hold switch in v45, recovery switch in v46, root (Magisk) in v47.
 **Not in Songate (user decision 2026-11-16):** date & time and language stay in Android's own Settings. The time
 methods exist in the service but Songate doesn't need them; the language methods are not implemented.
 
@@ -60,6 +60,8 @@ The service calls `notifyChange` on these URIs when the state changes, whoever c
 | `…/system/time` | zone, auto time, 24-hour |
 | `…/system/usb` | cable, USB mode |
 | `…/system/hold` | hold switch flipped, hold settings changed |
+| `…/system/recovery` | recovery switch progress |
+| `…/system/root` | Magisk install / removal progress |
 | `…/system/ota` | update state (see the OTA methods in the HiBy API) |
 
 ## 3. Methods
@@ -231,6 +233,59 @@ The switch on top of the R4 locks the player's own buttons. The settings below d
 - At start-up the switch's position is known only after its first flip. Until then `locked` is "0".
 - Observer `…/system/hold`: fires on every flip and every `hold_set`.
 - Errors: `bad_arg` ("level must be media, volume or all", "sleep must be 0 or 1").
+
+### Recovery switch (cap `recovery`, service v46)
+
+TWRP or OrangeFox, downloaded through the SongateOS update channel and put in place from Android. No restart needed.
+
+| method | arg | extras | returns |
+|---|---|---|---|
+| `recovery_get` | – | – | see below |
+| `recovery_check` | – | – | `ok` = started; looks for recovery packages in the SongateOS releases (result through `recovery_get` / the observer) |
+| `recovery_switch` | `twrp` / `orangefox` | – | `ok` = started; downloads that recovery's newest package and puts it in place |
+
+`recovery_get` fields:
+- `installed`: `twrp`, `orangefox`, `other` or `none`. `installed_ready` ("0"/"1") = it has the SongateOS update support
+  and was checked. `installed_version` (e.g. `2026.11.16`) when it was put in place by a switch.
+- `kinds` (String[]), and for each kind with a package: `twrp_version` / `orangefox_version`, `twrp_size` /
+  `orangefox_size` (Long bytes).
+- `state`: `idle` `checking` `downloading` `verifying` `switching` `done` `error`; `error` (text); `progress` (Long
+  bytes while downloading); `last_check` (ms).
+
+How it works and what the user should know:
+- Packages are `songateos-recovery-<kind>-<version>.zip` in the releases, signed with the SongateOS release key; a
+  package with any other signature is refused and deleted.
+- Both recovery slots (`recovery_a` and `recovery_b`) get the new recovery, each read back after writing. The
+  player's active slot is never changed.
+- Offer "Switch to OrangeFox" / "Switch to TWRP", and "Update" when `<installed>_version` is newer than
+  `installed_version`.
+- Needs the microSD card (download) and the internet (GitHub).
+- Observer `…/system/recovery`.
+- Errors in `error`, e.g. "Insert a microSD card first.", "The recovery package is not signed with the SongateOS key,
+  it was deleted.", "Couldn't switch: …".
+
+### Root (Magisk) (cap `root`, service v47)
+
+Optional root for users who want it. SongateOS itself doesn't need it.
+
+| method | arg | extras | returns |
+|---|---|---|---|
+| `root_get` | – | – | `installed` ("0"/"1"), `version` (installed Magisk, e.g. `31.1`), `latest` (from its last check), `keep` ("0"/"1"), `state`, `error` |
+| `root_check` | – | – | `ok` = started; looks for the newest official Magisk |
+| `root_install` | – | – | `ok` = started; downloads, checks and installs (or updates) Magisk |
+| `root_remove` | – | – | `ok` = started; puts the original boot image back |
+| `root_set` | – | `keep` ("0"/"1") | the same fields as `root_get` |
+
+- `state`: `idle` `checking` `downloading` `verifying` `installing` `removing` `restart` `error`. **`restart`**: done,
+  a restart finishes it; offer a "Restart now" button (`power restart`). After the restart `state` is `idle`.
+- Only Magisk's official releases on GitHub (topjohnwu/Magisk); the app must be signed by Magisk's developer, or
+  it's refused.
+- Install uses Magisk's own patch tool on the player's boot image, like the Magisk app's "Direct install"; the
+  Magisk app is installed too. Removal puts back the exact original boot image (checked).
+- `keep` ("Keep root after updates", default on): SongateOS updates don't replace the boot image today, so root
+  stays anyway; the setting is for future updates that will.
+- Warn before installing: root apps can change anything on the player.
+- Observer `…/system/root`.
 
 ### Display (cap `display`)
 

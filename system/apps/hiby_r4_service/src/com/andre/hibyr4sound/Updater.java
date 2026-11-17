@@ -385,7 +385,7 @@ public final class Updater {
     }
 
     /** res/raw/otacerts.zip (the release certificate) as a file, for RecoverySystem.verifyPackage. */
-    private static File certs(Context c) throws IOException {
+    static File certs(Context c) throws IOException {
         File f = new File(c.createDeviceProtectedStorageContext().getFilesDir(), "songateos_otacerts.zip");
         try (InputStream in = c.getResources().openRawResource(com.andre.hibyr4.service.R.raw.otacerts); OutputStream o = new FileOutputStream(f)) {
             byte[] b = new byte[8192]; int n;
@@ -588,7 +588,7 @@ public final class Updater {
                 .setContentIntent(pi).setAutoCancel(true).build());
     }
 
-    private static HttpURLConnection open(String url) throws IOException {
+    static HttpURLConnection open(String url) throws IOException {
         if (!url.startsWith("https://")) throw new IOException("not https: " + url);
         HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
         con.setInstanceFollowRedirects(true);
@@ -599,7 +599,7 @@ public final class Updater {
         return con;
     }
 
-    private static String httpText(String url) throws IOException {
+    static String httpText(String url) throws IOException {
         HttpURLConnection con = open(url);
         try {
             int code = con.getResponseCode();

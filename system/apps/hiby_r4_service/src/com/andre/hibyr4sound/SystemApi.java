@@ -61,7 +61,7 @@ final class SystemApi {
     static final String PERM = "com.andre.hibyr4.permission.SYSTEM_SETTINGS";
     static final String BASE = "content://com.andre.hibyr4.settings/system/";
     static final int API = 1;
-    static final String[] CAPS = { "wifi", "bt", "bt_codec", "display", "earbuds", "output", "storage", "time", "about", "usb", "hold", "theme", "power", "ota" };
+    static final String[] CAPS = { "wifi", "bt", "bt_codec", "display", "earbuds", "output", "storage", "time", "about", "usb", "hold", "recovery", "root", "theme", "power", "ota" };
 
     private static Context sApp;
     private static Handler sH;
@@ -169,7 +169,7 @@ final class SystemApi {
             return HoldSwitch.onKey(arg);
         }
         boolean ours = method.startsWith("wifi_") || method.startsWith("bt_") || method.startsWith("output_")
-                || method.startsWith("display_") || method.startsWith("earbuds_") || method.startsWith("storage_") || method.startsWith("time_") || method.startsWith("usb_") || method.startsWith("hold_") || method.equals("about") || method.equals("zones_list") || method.equals("power");
+                || method.startsWith("display_") || method.startsWith("earbuds_") || method.startsWith("storage_") || method.startsWith("time_") || method.startsWith("usb_") || method.startsWith("hold_") || method.startsWith("recovery_") || method.startsWith("root_") || method.equals("about") || method.equals("zones_list") || method.equals("power");
         if (!ours) return null;
         if (!trusted(c)) return err("no_permission", "Only Songate can change system settings");
         String v = extras == null ? null : extras.getString("value");
@@ -195,6 +195,20 @@ final class SystemApi {
                     return AirPodsProbe.aapProbe(ad.getRemoteDevice(arg));
                 }
                 case "earbuds_set": { Bundle[] e = new Bundle[1]; BluetoothDevice d = a2dpDevice(arg, e); return d == null ? e[0] : Earbuds.set(d, extras); }
+                case "root_get": return MagiskRoot.get(c);
+                case "root_set": return MagiskRoot.set(c, extras);
+                case "root_check": return MagiskRoot.checkAsync(c);
+                case "root_install": return MagiskRoot.installAsync(c);
+                case "root_remove": return MagiskRoot.removeAsync(c, "dry".equals(arg) && Binder.getCallingUid() == Process.SYSTEM_UID);
+                case "root_install_file":   // development: an APK already on the R4; system uid only
+                    if (Binder.getCallingUid() != Process.SYSTEM_UID) return err("no_permission", "System only");
+                    return MagiskRoot.installFileAsync(c, arg);
+                case "recovery_get": return RecoverySwitch.get(c);
+                case "recovery_check": return RecoverySwitch.checkAsync(c);
+                case "recovery_switch": return RecoverySwitch.switchAsync(c, arg);
+                case "recovery_switch_file":   // development: a package already on the R4; system uid only
+                    if (Binder.getCallingUid() != Process.SYSTEM_UID) return err("no_permission", "System only");
+                    return RecoverySwitch.switchFileAsync(c, arg);
                 case "hold_get": return HoldSwitch.get();
                 case "hold_set": return HoldSwitch.set(extras);
                 case "about": return about();

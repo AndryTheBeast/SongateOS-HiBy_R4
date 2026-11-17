@@ -129,6 +129,7 @@ pval() { echo "$1" | grep "^\[sys\.hibyr4\.$2\]" | sed 's/^[^:]*: \[\(.*\)\]$/\1
           ready|st_*) ;;   # status values published by this service for the header card
           ota_*) ;;        # SongateOS updater, handled by ota_bridge.sh
           hold*) ;;        # hold switch state + level, owned by hold_switch.sh and the service
+          magisk) ;;       # installed Magisk version, published by ota_bridge.sh
           led_color|led_bright)
             if [ "$pending" != "1" ]; then
               touch $DIR/led_live; pending=1

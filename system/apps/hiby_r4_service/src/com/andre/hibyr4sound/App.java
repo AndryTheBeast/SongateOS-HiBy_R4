@@ -25,5 +25,6 @@ public class App extends Application {
         SystemTheme.start(this); // SongateOS system colours: the exact palette on top of Android's (see SystemTheme)
         SystemApi.start(this);   // SongateOS system API for Songate: Wi-Fi, Bluetooth, output, power (see SystemApi)
         HoldSwitch.start(this);  // hold switch on top of the R4: button locks, sleep when locked (see HoldSwitch)
+        MagiskRoot.start(this);  // root (Magisk): clears a finished "restart" state
     }
 }
