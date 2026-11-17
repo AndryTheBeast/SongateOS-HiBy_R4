@@ -110,7 +110,8 @@ final class RecoverySwitch {
             state(c, "idle", null);
         } catch (Exception ex) {
             Log.w(TAG, "check", ex);
-            state(c, "error", "Couldn't look for recoveries: " + msg(ex));
+            String m = msg(ex);   // the approved wording for "no public release yet" is shown as it is
+            state(c, "error", m.startsWith(Updater.NO_RELEASE) ? m : "Couldn't look for recoveries: " + m);
         }
     }
 

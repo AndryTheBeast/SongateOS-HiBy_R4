@@ -238,7 +238,8 @@ public final class Updater {
             }
         } catch (Exception e) {
             Log.w(TAG, "check", e);
-            state(c, READY.equals(prev) ? READY : ERROR, READY.equals(prev) ? null : "Check failed: " + msg(e));
+            String m = msg(e);   // the approved wording for "no public release yet" is shown as it is
+            state(c, READY.equals(prev) ? READY : ERROR, READY.equals(prev) ? null : m.startsWith(NO_RELEASE) ? m : "Check failed: " + m);
         }
     }
 
@@ -531,8 +532,12 @@ public final class Updater {
 
     // ------------------------------------------------------------------ after the reboot
     /** Called at boot: report the recovery's result once, tidy up, and (re)schedule the daily check. */
+    static final String NO_RELEASE = "No SongateOS release published yet";
+
     static void onBoot(Context c) {
         schedule(c);
+        // text stored by checks before v32 (it stays until the next check otherwise)
+        if (prefs(c).getString("error", "").contains("repository private?")) prefs(c).edit().putString("error", NO_RELEASE).apply();
         final Context app = c.getApplicationContext();
         EX.execute(() -> {
             String res = "";
@@ -604,7 +609,7 @@ public final class Updater {
         try {
             int code = con.getResponseCode();
             if (code == 403 || code == 429) throw new IOException("GitHub rate limit, try again later");
-            if (code == 404) throw new IOException("No SongateOS release published yet");
+            if (code == 404) throw new IOException(NO_RELEASE);
             if (code != 200) throw new IOException("HTTP " + code);
             StringBuilder s = new StringBuilder();
             try (BufferedReader r = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8))) {
