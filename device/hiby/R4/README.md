@@ -44,6 +44,13 @@ fastboot reboot recovery
 
 Undo: flash your own stock recovery back the same way (`fastboot flash recovery_a stock_recovery_a.img`).
 
+## Installer zip (TWRP)
+
+[`installer/`](installer) builds the TWRP installer zip from a built `recovery.img`:
+`python3 installer/make_twrp_zip.py out/target/product/R4/recovery.img TWRP-3.7-Unofficial-R4.zip`. Its
+`update-binary` checks the device (R4, trinket, eMMC) and the image, writes `recovery_a` and `recovery_b`, and reads
+them back. OrangeFox builds its own zip.
+
 ## Build
 
 Both builds use a standard 12.1 minimal manifest; clone this repo to `device/hiby/R4`.

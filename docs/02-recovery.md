@@ -10,7 +10,8 @@ Android doesn't start. Both work on the R4 and are built from this repository's
 > you undo this.
 
 **Downloads:** the recovery images are on the [Releases](https://github.com/AndryTheBeast/SongateOS-HiBy_R4/releases)
-page, each with its SHA-256 in `SHA256SUMS.txt`. Use the **`.img`** files with this guide.
+page, each with its SHA-256 in `SHA256SUMS.txt`: an **`.img`** for the first install (this guide) and a **`.zip`** for
+switching later from inside the recovery.
 
 ## What you need
 
@@ -69,8 +70,24 @@ fastboot reboot recovery
 | Backups to microSD or USB OTG | yes | yes |
 | Built-in extras | – | AromaFM file manager, Magisk installer in the zip version |
 
-To switch, flash the other image the same way. The OrangeFox **zip** version writes to both `recovery_a` and
-`recovery_b`; the `.img` in this guide only touches `recovery_a`.
+## Switch between TWRP and OrangeFox
+
+Once one of them is installed, you can switch from inside the recovery, without a PC:
+
+1. Copy the other recovery's **zip** to the microSD card.
+2. In the recovery: **Install**, switch to the microSD, pick the zip, swipe to flash.
+3. **Reboot › Recovery**: the other recovery starts.
+
+The TWRP zip first checks it's a standard R4 and that its image is intact, and stops without writing anything if
+not. It then shows each step and reads the partitions back.
+
+**Both zips write `recovery_a` and `recovery_b`, on purpose.** The player runs on slot a, and that doesn't change: the
+zips never switch the active slot. But with the custom recovery in both slots, a player that ends up on slot b by
+mistake can still start the recovery and go back with **Reboot › Slot A**. With HiBy's stock recovery in
+`recovery_b`, that way back needs a PC or EDL.
+
+(The first install with the `.img` above writes only `recovery_a`. Flash a zip once afterwards if you want
+`recovery_b` covered too.)
 
 ## What works
 
@@ -90,6 +107,7 @@ From Android or the custom recovery:
 ```
 adb reboot fastboot
 fastboot flash recovery_a D:\R4_backup\recovery_a.bin
+fastboot flash recovery_b D:\R4_backup\recovery_b.bin      (only if a zip wrote recovery_b)
 fastboot reboot
 ```
 
