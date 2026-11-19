@@ -1,0 +1,117 @@
+name: 🐞 Bug report
+description: Something in SongateOS does not work as it should.
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. SongateOS is only for the **HiBy R4 standard model**, and tests were only made on HiBy's firmware of August 2026. Problems inside the music app itself belong to [Songate's issues](https://github.com/AndryTheBeast/Songate/issues).
+  - type: dropdown
+    id: model
+    attributes:
+      label: Your player
+      options:
+        - HiBy R4 (standard)
+        - HiBy R4 EVA
+        - Another player
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        **The R4 EVA and other players are not supported.** SongateOS must never be installed on them; please don't open an issue for them.
+  - type: input
+    id: version
+    attributes:
+      label: SongateOS version
+      description: Songate › Settings › About.
+      placeholder: 0.1.0-beta.8
+    validations:
+      required: true
+  - type: input
+    id: songate
+    attributes:
+      label: Songate version
+      description: Songate › Settings › About.
+      placeholder: 2.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: recovery
+    attributes:
+      label: Recovery
+      options:
+        - TWRP
+        - OrangeFox
+        - HiBy's own (stock)
+        - I don't know
+    validations:
+      required: true
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part?
+      options:
+        - Installing or updating
+        - Starting up (boot loop, stuck logo)
+        - Sound on 3.5 mm or 4.4 mm
+        - Bit-perfect, sample rate or DAC volume
+        - Bluetooth or earbuds
+        - Status lights
+        - Buttons or the hold switch
+        - Gestures and recent apps
+        - Wi-Fi or USB
+        - Google apps
+        - The recovery (TWRP or OrangeFox)
+        - Battery and charging
+        - Something else
+    validations:
+      required: true
+  - type: dropdown
+    id: card
+    attributes:
+      label: microSD card
+      options:
+        - A card is in
+        - No card
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: And what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to make it happen
+      placeholder: |
+        1. Open …
+        2. Press …
+        3. …
+    validations:
+      required: true
+  - type: dropdown
+    id: often
+    attributes:
+      label: How often?
+      options:
+        - Always
+        - Sometimes
+        - Once
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: How to get one is in guide 10 (Troubleshooting and logs). Please check it for names and addresses you'd rather not share before posting.
+      render: text
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots or a short screen recording help a lot.

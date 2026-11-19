@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and help
+    url: https://github.com/AndryTheBeast/SongateOS-HiBy_R4/discussions
+    about: Installing, choosing a recovery, whether something is possible. Ask in Discussions.
+  - name: Troubleshooting and logs
+    url: https://github.com/AndryTheBeast/SongateOS-HiBy_R4/blob/main/docs/10-troubleshooting.md
+    about: Boot loops, no sound, and how to get a log for a bug report.
+  - name: Something in the music app
+    url: https://github.com/AndryTheBeast/Songate/issues
+    about: Library, playback, playlists, lyrics and the rest of Songate itself.
