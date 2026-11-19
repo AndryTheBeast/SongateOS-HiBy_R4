@@ -1,0 +1,7 @@
+// The HiBy pages in Settings (HiBy audio, equalizer, status LED, SongateOS update), compiled into Settings-core
+// (packages/apps/Settings, see vendor/songateos/patches/apply_settings.py). The HiBy R4 service's Settings tiles
+// open them by class name.
+filegroup {
+    name: "songateos_settings_pages",
+    srcs: ["src/**/*.java"],
+}

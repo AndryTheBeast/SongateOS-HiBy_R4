@@ -1,0 +1,88 @@
+// SongateOS (HiBy R4): the former Magisk module's scripts (/system_ext/bin/songateos, run as root by songateos.rc)
+// and their data files (/system_ext/etc/songateos).
+
+sh_binary {
+    name: "songateos_post-fs-data.sh",
+    src: "post-fs-data.sh",
+    filename: "post-fs-data.sh",
+    sub_dir: "songateos",
+    system_ext_specific: true,
+    init_rc: ["songateos.rc"],
+}
+
+sh_binary {
+    name: "songateos_service.sh",
+    src: "service.sh",
+    filename: "service.sh",
+    sub_dir: "songateos",
+    system_ext_specific: true,
+}
+
+sh_binary {
+    name: "songateos_hiby_settings.sh",
+    src: "hiby_settings.sh",
+    filename: "hiby_settings.sh",
+    sub_dir: "songateos",
+    system_ext_specific: true,
+}
+
+sh_binary {
+    name: "songateos_ota_bridge.sh",
+    src: "ota_bridge.sh",
+    filename: "ota_bridge.sh",
+    sub_dir: "songateos",
+    system_ext_specific: true,
+}
+
+sh_binary {
+    name: "songateos_hold_switch.sh",
+    src: "hold_switch.sh",
+    filename: "hold_switch.sh",
+    sub_dir: "songateos",
+    system_ext_specific: true,
+}
+
+sh_binary {
+    name: "songateos_afparam.sh",
+    src: "afparam.sh",
+    filename: "afparam.sh",
+    sub_dir: "songateos",
+    system_ext_specific: true,
+}
+
+// HiBy's audio policy with the Wired Headset/Headphones ports and the bit_perfect mixPort (template; post-fs-data.sh
+// copies it to /data/songateos, where the native-rate setting edits it, and bind-mounts it over /vendor's)
+prebuilt_etc {
+    name: "songateos_audio_policy_configuration.xml",
+    src: "audio_policy_configuration.xml",
+    filename: "audio_policy_configuration.xml",
+    sub_dir: "songateos",
+    system_ext_specific: true,
+}
+
+// HiBy's gpio-keys.kl without WAKE on play/pause (mounted when "media buttons wake the screen" is off)
+prebuilt_etc {
+    name: "songateos_gpio-keys-nowake.kl",
+    src: "keylayout/gpio-keys-nowake.kl",
+    filename: "gpio-keys-nowake.kl",
+    sub_dir: "songateos/keylayout",
+    system_ext_specific: true,
+}
+
+// boot animation hand-off to Songate (service.sh holds the animation until the launcher has focus)
+prebuilt_etc {
+    name: "songateos_bootanimation_hold.zip",
+    src: "bootanimation_hold.zip",
+    filename: "bootanimation_hold.zip",
+    sub_dir: "songateos",
+    system_ext_specific: true,
+}
+
+// the master volume helper (Bluetooth fix), run by service.sh with app_process
+java_library {
+    name: "songateos_mastervol",
+    srcs: ["mastervol/MvProbe.java"],
+    platform_apis: true,
+    installable: true,
+    system_ext_specific: true,
+}

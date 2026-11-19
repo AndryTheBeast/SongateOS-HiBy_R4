@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- HiBy R4: no calls, no SMS (hides emergency-call button, call/SMS settings) -->
-<resources>
-    <bool name="config_voice_capable">false</bool>
-    <bool name="config_sms_capable">false</bool>
-</resources>

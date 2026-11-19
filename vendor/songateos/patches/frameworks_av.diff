@@ -1,0 +1,46 @@
+diff --git a/media/libaudiohal/impl/DeviceHalHidl.cpp b/media/libaudiohal/impl/DeviceHalHidl.cpp
+index 4d4e8a8..b6441e5 100644
+--- a/media/libaudiohal/impl/DeviceHalHidl.cpp
++++ b/media/libaudiohal/impl/DeviceHalHidl.cpp
+@@ -280,6 +280,11 @@ status_t DeviceHalHidl::openOutputStream(
+         flags = (audio_output_flags_t)
+                 (flags | AUDIO_OUTPUT_FLAG_FAST | AUDIO_OUTPUT_FLAG_DEEP_BUFFER);
+     }
++    // SongateOS (HiBy R4): HALs before 7.1 have no BIT_PERFECT flag; HiBy's opens its DIRECT path instead
++    if ((flags & AUDIO_OUTPUT_FLAG_BIT_PERFECT) != 0) {
++        flags = (audio_output_flags_t)
++                ((flags & ~AUDIO_OUTPUT_FLAG_BIT_PERFECT) | AUDIO_OUTPUT_FLAG_DIRECT);
++    }
+ #endif
+ 
+     CoreUtils::AudioOutputFlags hidlFlags;
+diff --git a/services/audiopolicy/managerdefault/AudioPolicyManager.cpp b/services/audiopolicy/managerdefault/AudioPolicyManager.cpp
+index 1823522..9eda1c2 100644
+--- a/services/audiopolicy/managerdefault/AudioPolicyManager.cpp
++++ b/services/audiopolicy/managerdefault/AudioPolicyManager.cpp
+@@ -4657,7 +4657,11 @@ status_t AudioPolicyManager::getSupportedMixerAttributes(
+         ALOGE("%s the requested device is currently unavailable", __func__);
+         return BAD_VALUE;
+     }
+-    if (!audio_is_usb_out_device(deviceDescriptor->type())) {
++    // SongateOS (HiBy R4): bit-perfect mixer attributes on the wired outputs too, not only USB
++    if (!audio_is_usb_out_device(deviceDescriptor->type())
++            && deviceDescriptor->type() != AUDIO_DEVICE_OUT_WIRED_HEADPHONE
++            && deviceDescriptor->type() != AUDIO_DEVICE_OUT_WIRED_HEADSET
++            && deviceDescriptor->type() != AUDIO_DEVICE_OUT_LINE) {
+         ALOGE("%s the requested device(type=%#x) is not usb device", __func__,
+               deviceDescriptor->type());
+         return BAD_VALUE;
+@@ -4691,7 +4695,11 @@ status_t AudioPolicyManager::setPreferredMixerAttributes(
+         ALOGE("%s the requested device is currently unavailable", __func__);
+         return BAD_VALUE;
+     }
+-    if (!audio_is_usb_out_device(deviceDescriptor->type())) {
++    // SongateOS (HiBy R4): bit-perfect mixer attributes on the wired outputs too, not only USB
++    if (!audio_is_usb_out_device(deviceDescriptor->type())
++            && deviceDescriptor->type() != AUDIO_DEVICE_OUT_WIRED_HEADPHONE
++            && deviceDescriptor->type() != AUDIO_DEVICE_OUT_WIRED_HEADSET
++            && deviceDescriptor->type() != AUDIO_DEVICE_OUT_LINE) {
+         ALOGE("%s(%d), type=%d, is not a usb output device",
+               __func__, portId, deviceDescriptor->type());
+         return BAD_VALUE;

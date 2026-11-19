@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HiBy R4: no calls, no SMS, no mobile data: a Wi-Fi-only device (hides emergency-call button, call/SMS settings).
+     All three must be false: RIL treats the device as cellular if any of them is true and then looks for a radio HAL
+     the R4 doesn't have; with HiBy's vendor declaring two SIM slots (dsds) com.android.phone crashed in a loop
+     (RIL.getCurrentCalls: null RadioVoiceProxy for the second slot; SongateOS 0.1.0-beta.1). -->
+<resources>
+    <bool name="config_voice_capable">false</bool>
+    <bool name="config_sms_capable">false</bool>
+    <bool name="config_mobile_data_capable">false</bool>
+</resources>

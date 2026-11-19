@@ -1,0 +1,24 @@
+# SongateOS (HiBy R4): the SELinux rules the Magisk module added at runtime (magiskpolicy --live / sepolicy.rule).
+# HiBy's own processes and properties are defined only in HiBy's vendor policy, so the system side names them through
+# Android's shared attributes (hal_health_server, hal_audio_server, vendor_property_type) instead of by name.
+
+# LED files (genfs_contexts): written by the service app and Settings (both system_app), and by HiBy's LED rules
+type hibyr4_led_file, fs_type, sysfs_type;
+allow system_app hibyr4_led_file:file { write open getattr };
+allow init hibyr4_led_file:file { write open getattr setattr };
+allow vendor_init hibyr4_led_file:file { write open getattr };
+
+# Battery: HiBy's health HAL reads the CW2015 / MP2731 nodes (labelled generic "sysfs") and HiBy's properties
+allow hal_health_server sysfs:file { read open getattr };
+allow hal_health_server sysfs:dir { read open search getattr };
+allow hal_health_server vendor_property_type:file { read open getattr map };
+
+# HiBy's audio HAL sets its own vendor.audio.hiby.hw.sample_rate / sample_quality (the quality LED and the
+# Settings header read them through sys.hibyr4.st_* copies)
+allow hal_audio_server property_socket:sock_file write;
+allow hal_audio_server init:unix_stream_socket connectto;
+allow hal_audio_server vendor_property_type:property_service set;
+
+# The HiBy R4 service sets the wired volume in the DAC (tinymix "Plat Left/Right Playback Volume", DacVolume)
+allow system_app audio_device:dir { search read open getattr };
+allow system_app audio_device:chr_file { read write open ioctl getattr };

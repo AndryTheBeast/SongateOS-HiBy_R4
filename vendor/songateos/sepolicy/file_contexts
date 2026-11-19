@@ -1,0 +1,2 @@
+# SongateOS root scripts (the former Magisk module's), run by init in TrebleDroid's phhsu_daemon domain
+/system_ext/bin/songateos(/.*)?    u:object_r:phhsu_exec:s0

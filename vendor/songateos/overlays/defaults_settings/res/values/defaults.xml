@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- touch sounds off: each click made Android rebuild the bit-perfect route, and HiBy's driver played ~3 s of noise -->
+    <bool name="def_sound_effects_enabled">false</bool>
+    <!-- no lock screen: wake goes straight to Songate -->
+    <bool name="def_lockscreen_disabled">true</bool>
+    <!-- screen off after 1 minute (Songate's Screen card can change it, including Never) -->
+    <integer name="def_screen_off_timeout">60000</integer>
+    <!-- No system sounds at all (user decision 2026-11-18): every one opens a second stream through Android's mixer,
+         and HiBy's driver re-routes the output, which breaks the bit-perfect DAC stream (the music stuttered at every
+         hold-switch lock/unlock from the lock sound; SongateOS 0.1.0-beta.2). Touch sounds are above; the low-battery
+         warning is a notification (silenced by Do Not Disturb, on by default); no ringtone/notification/alarm sound
+         (songateos.mk). -->
+    <integer name="def_lockscreen_sounds_enabled">0</integer>   <!-- lock / unlock / trusted -->
+    <bool name="def_charging_sounds_enabled">false</bool>        <!-- charger plugged in (wired and wireless) -->
+    <integer name="def_power_sounds_enabled">0</integer>         <!-- power connected / low battery (older path) -->
+    <integer name="def_dock_sounds_enabled">0</integer>          <!-- dock / undock -->
+    <bool name="def_dtmf_tones_enabled">false</bool>             <!-- dial-pad tones -->
+</resources>

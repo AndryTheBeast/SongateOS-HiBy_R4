@@ -14,8 +14,13 @@
 #    - check the zip path and its SHA-256 on the microSD,
 #    - on success: write /tmp/openrecoveryscript (install with signature check against the SongateOS key only,
 #      then reboot); on failure: write ota.result and reboot to the system unchanged.
+#    Hook 3 (Google apps, user 2026-11-18): the request may also name a Google apps zip (gapps_zip + gapps_sha256,
+#    optional gapps_name). It is installed after SongateOS, or alone when the request has no SongateOS zip. Google
+#    apps zips are signed by their makers, not with the SongateOS key, so for that one zip the signature check is off
+#    and the SHA-256 in the request (checked here) is what lets it in; the HiBy R4 service checked the maker's own
+#    checksum before writing the request, and only root can write /metadata/songateos.
 # Nothing here writes to any partition except the small files in /metadata/songateos.
-HOOK_VERSION=2
+HOOK_VERSION=5
 # mksh's default TMPDIR is /data/local, which isn't mounted in the recovery
 export TMPDIR=/tmp
 LOG=/tmp/songateos_ota.log
@@ -71,6 +76,23 @@ fi
 trap cleanup EXIT
 [ -d "$M/songateos" ] || { log "no $M/songateos, updater not in use"; exit 0; }
 
+# 0. the clock (hook 5, 2026-11-19): the recovery starts at 1970. SongateOS leaves the time in /metadata (every
+#    5 minutes and when a restart begins); set it, so files written here get a real date. Only forward.
+T=$(cat "$M/songateos/clock" 2>/dev/null)
+if echo "$T" | grep -qE '^[0-9]{10}$' && [ "$T" -gt "$(date +%s)" ]; then
+  setclock() { date -u @"$1" >/dev/null 2>&1 || date -u -s @"$1" >/dev/null 2>&1; }
+  setclock "$T"
+  log "clock set from SongateOS: $(date -u '+%Y-%m-%d %H:%M') UTC"
+  # The recovery's own start-up "time fix-up" (hardware clock + Android's offset, which is in the unreadable /data)
+  # puts it back to 1970 a few seconds later (seen on OrangeFox ota9): set it again for 30 s, counting the time since.
+  U0=$(cut -d. -f1 /proc/uptime)
+  ( i=0; while [ $i -lt 15 ]; do
+      sleep 2; i=$((i + 1))
+      W=$((T + $(cut -d. -f1 /proc/uptime) - U0))
+      [ "$(date +%s)" -lt $((W - 30)) ] && setclock "$W"
+    done ) >/dev/null 2>&1 &
+fi
+
 # 1. recovery.info
 SLOT=$(getprop ro.boot.slot_suffix)
 NAME=TWRP; [ -n "$(getprop ro.build.fox_id)$(getprop ro.orangefox.version)" ] || [ -d /FFiles ] && NAME=OrangeFox
@@ -92,16 +114,19 @@ if [ -f "$M/songateos/return.cmd" ]; then
   fi
 fi
 [ -f "$CMD" ] || exit 0
-VERSION=""; ZIP=""; SHA=""
+VERSION=""; ZIP=""; SHA=""; GZIP=""; GSHA=""; GNAME=""
 while IFS='=' read -r k v; do
   case "$k" in
     version) VERSION=$v ;;
     zip) ZIP=$v ;;
     sha256) SHA=$v ;;
+    gapps_zip) GZIP=$v ;;
+    gapps_sha256) GSHA=$v ;;
+    gapps_name) GNAME=$v ;;
   esac
 done < "$CMD"
 rm -f "$CMD"; sync          # before anything else: never twice
-log "update request: version '$VERSION' zip '$ZIP'"
+log "update request: version '$VERSION' zip '$ZIP' gapps '$GZIP'"
 start_log_saver
 
 
@@ -112,13 +137,18 @@ fail() { log "FAILED: $1"; result fail "$1"
   exit 0; }
 
 # zip = path relative to the microSD root; plain characters only, no "..", must end in .zip
-case "$ZIP" in
-  ""|/*|*..*|*[!A-Za-z0-9._/-]*) fail "bad zip path" ;;
-  *.zip) ;;
-  *) fail "bad zip path" ;;
-esac
-echo "$SHA" | grep -qE '^[0-9a-f]{64}$' || fail "bad checksum in request"
-echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?$' || fail "bad version in request"
+okpath() { case "$1" in ""|/*|*..*|*[!A-Za-z0-9._/-]*) return 1 ;; *.zip) return 0 ;; *) return 1 ;; esac; }
+[ -n "$ZIP$GZIP" ] || fail "nothing to install"
+if [ -n "$ZIP" ]; then
+  okpath "$ZIP" || fail "bad zip path"
+  echo "$SHA" | grep -qE '^[0-9a-f]{64}$' || fail "bad checksum in request"
+  echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?$' || fail "bad version in request"
+fi
+if [ -n "$GZIP" ]; then
+  okpath "$GZIP" || fail "bad Google apps zip path"
+  echo "$GSHA" | grep -qE '^[0-9a-f]{64}$' || fail "bad Google apps checksum in request"
+  case "$GNAME" in ""|core|basic) ;; *) fail "bad Google apps name" ;; esac
+fi
 
 # microSD (exFAT; the recoveries also know vfat)
 if mountpoint -q /external_sd 2>/dev/null; then
@@ -131,26 +161,59 @@ else
     fail "microSD not found"
   fi
 fi
-[ -f "$SD/$ZIP" ] || fail "update file not on the microSD"
-log "checking SHA-256 of $ZIP ..."
-HAVE=$(sha256sum "$SD/$ZIP" | cut -d' ' -f1)
-[ "$HAVE" = "$SHA" ] || fail "checksum mismatch"
-log "checksum OK"
+if [ -n "$ZIP" ]; then
+  [ -f "$SD/$ZIP" ] || fail "update file not on the microSD"
+  log "checking SHA-256 of $ZIP ..."
+  HAVE=$(sha256sum "$SD/$ZIP" | cut -d' ' -f1)
+  [ "$HAVE" = "$SHA" ] || fail "checksum mismatch"
+  log "checksum OK"
+fi
+if [ -n "$GZIP" ]; then
+  [ -f "$SD/$GZIP" ] || fail "Google apps file not on the microSD"
+  log "checking SHA-256 of $GZIP ..."
+  HAVE=$(sha256sum "$SD/$GZIP" | cut -d' ' -f1)
+  [ "$HAVE" = "$GSHA" ] || fail "Google apps checksum mismatch"
+  log "Google apps checksum OK"
+fi
 [ "$MOUNTED_SD" = 1 ] && { umount /tmp/sgos_sd; MOUNTED_SD=0; }
 
 # Signature check against the SongateOS release key only (this boot only: the ramdisk is rebuilt every boot).
-KEYS=/system/etc/security/songateos_otacerts.zip
-[ -f "$KEYS" ] || fail "recovery has no SongateOS key"
-cp -f /system/etc/security/otacerts.zip /tmp/otacerts.orig.zip 2>/dev/null
-cp -f "$KEYS" /system/etc/security/otacerts.zip || fail "cannot load the SongateOS key"
+if [ -n "$ZIP" ]; then
+  KEYS=/system/etc/security/songateos_otacerts.zip
+  [ -f "$KEYS" ] || fail "recovery has no SongateOS key"
+  cp -f /system/etc/security/otacerts.zip /tmp/otacerts.orig.zip 2>/dev/null
+  cp -f "$KEYS" /system/etc/security/otacerts.zip || fail "cannot load the SongateOS key"
+fi
+
+# Hook 4: Google apps installers (NikGapps, MindTheGapps) write to /product and /system_ext as "dedicated partitions"
+# when HiBy's product_a / system_ext_a are mapped. SongateOS doesn't use them (its /product and /system_ext are
+# inside system_a) and they're read-only, so the install failed half-way and left duplicate files (0.1.0-beta.4:
+# "Multiple modules installers" boot loop). Unmap them for this recovery session only (nothing is written; they come
+# back at the next boot), so the installers use the folders inside system_a.
+if [ -n "$GZIP" ]; then
+  umount /product /system_ext 2>/dev/null
+  for p in product_a system_ext_a; do
+    [ -e /dev/block/mapper/$p ] && lptools unmap $p >/dev/null 2>&1 && log "unmapped $p for the Google apps install"
+  done
+fi
 
 result started "installing"
 # No here-document: Android's mksh builds those in its TMPDIR, which defaults to /data/local - not mounted in
 # the recovery (encrypted), so "cat <<EOF" silently wrote an EMPTY script (OrangeFox then ran nothing and rebooted).
-printf '%s\n' "print SongateOS update $VERSION" "mount /external_sd" "set tw_signed_zip_verify 1" \
-  "install /external_sd/$ZIP" "set tw_signed_zip_verify 0" "reboot system" > /tmp/openrecoveryscript
-if ! grep -q "^install /external_sd/$ZIP\$" /tmp/openrecoveryscript; then
+# SongateOS first (signature-checked), then Google apps (checked by SHA-256 above, signature check off).
+{ echo "mount /external_sd"
+  if [ -n "$ZIP" ]; then
+    echo "print SongateOS update $VERSION"; echo "set tw_signed_zip_verify 1"; echo "install /external_sd/$ZIP"
+  fi
+  if [ -n "$GZIP" ]; then
+    echo "print Google apps ${GNAME}"; echo "set tw_signed_zip_verify 0"; echo "install /external_sd/$GZIP"
+  fi
+  echo "set tw_signed_zip_verify 0"; echo "reboot system"; } > /tmp/openrecoveryscript
+if [ -n "$ZIP" ] && ! grep -q "^install /external_sd/$ZIP\$" /tmp/openrecoveryscript; then
   cp -f /tmp/otacerts.orig.zip /system/etc/security/otacerts.zip 2>/dev/null
+  fail "could not write the recovery script"
+fi
+if [ -n "$GZIP" ] && ! grep -q "^install /external_sd/$GZIP\$" /tmp/openrecoveryscript; then
   fail "could not write the recovery script"
 fi
 log "OpenRecoveryScript written: $(tr '\n' ';' < /tmp/openrecoveryscript)"

@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Default quick-settings tiles for a music player (used for new users / "reset tiles"; an existing tile setup keeps
-     the user's own): Wi-Fi/internet, Bluetooth, airplane mode (offline listening), do not disturb, battery saver.
-     Left out: flashlight, cast, alarm, wallet, controls, screen record, camera/mic toggles, safety center. -->
-<resources>
-    <string name="quick_settings_tiles_default" translatable="false">internet,bt,airplane,dnd,battery</string>
-</resources>

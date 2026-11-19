@@ -1,0 +1,20 @@
+// Songate 2.1.0 BETA 1, signed with Songate's release key (SHA-256 4ead4fd1...cace04): shipped as it is.
+// It is the only launcher in SongateOS: the build leaves out the packages it overrides.
+// Songate.apk itself is not in the repository; copy it here from the Songate release before building.
+android_app_import {
+    name: "Songate",
+    apk: "Songate.apk",
+    // Shipped byte-for-byte (signature v2/v3 kept). Songate's native libraries are stored uncompressed and
+    // page-aligned, so Android loads them straight from the APK: a built-in app's compressed libraries are never
+    // unpacked (SongateOS 0.1.0-beta.1: libmain.so not found, SDL error at first boot).
+    preprocessed: true,
+    system_ext_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+    overrides: [
+        "TrebuchetQuickStep",
+        "Launcher3QuickStep",
+        "LineageSetupWizard",
+    ],
+}

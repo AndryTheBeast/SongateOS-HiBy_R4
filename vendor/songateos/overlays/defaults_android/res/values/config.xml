@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- dark mode by default (Songate's own brightness setting switches it later through the service) -->
+    <integer name="config_defaultNightMode">2</integer>
+    <!-- no always-on display: a player doesn't need it, and the screen sleeps properly -->
+    <bool name="config_dozeAlwaysOnEnabled">false</bool>
+    <!-- album art in other apps' media sessions: Android shrinks it inside the app to this size (default 320dp =
+         576 px on the R4, soft on Songate's 750 px screen; user, 2026-11-19). 500dp = 900 px: sharper than the screen, without huge bitmaps (1000dp would be ~13 MB per picture). -->
+    <dimen name="config_mediaMetadataBitmapMaxSize">500dp</dimen>
+</resources>

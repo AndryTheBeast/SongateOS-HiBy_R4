@@ -1,0 +1,28 @@
+// The HiBy R4 service (com.andre.hibyr4.service): HiBy settings API, SongateOS system API for Songate, DAC volume,
+// lights, line out, hold switch, updates, recovery switch, root. Runs as the system uid (platform key).
+android_app {
+    name: "HiByR4Service",
+    srcs: ["src/**/*.java"],
+    resource_dirs: ["res"],
+    manifest: "AndroidManifest.xml",
+    certificate: "platform",
+    privileged: true,
+    platform_apis: true,
+    aaptflags: [
+        "--version-code",
+        "97",
+        "--version-name",
+        "97.0",
+    ],
+    // reflection on hidden APIs throughout: no shrinking
+    optimize: {
+        enabled: false,
+    },
+    required: ["privapp-permissions-hibyr4-service.xml"],
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-hibyr4-service.xml",
+    src: "privapp-permissions-hibyr4-service.xml",
+    sub_dir: "permissions",
+}

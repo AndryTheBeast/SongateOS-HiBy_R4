@@ -1,0 +1,65 @@
+// SongateOS look and player defaults (same package names as the Magisk module's overlays; the HiBy R4 service refers
+// to the font overlay by its package name).
+
+// no voice calls / SMS (a music player has no modem use)
+runtime_resource_overlay {
+    name: "HiByR4NoVoice",
+    product_specific: true,
+    manifest: "novoice/AndroidManifest.xml",
+    resource_dirs: ["novoice/res"],
+}
+
+// black screen while Android finishes starting (instead of Settings' "Phone is starting")
+runtime_resource_overlay {
+    name: "HiByR4FallbackHome",
+    product_specific: true,
+    manifest: "fallbackhome/AndroidManifest.xml",
+    resource_dirs: ["fallbackhome/res"],
+}
+
+// black default wallpaper
+runtime_resource_overlay {
+    name: "HiByR4BlackWallpaper",
+    product_specific: true,
+    manifest: "blackwallpaper/AndroidManifest.xml",
+    resource_dirs: ["blackwallpaper/res"],
+}
+
+// Inter as the system font (a theme "font" overlay, switched on by the service's system colours)
+runtime_resource_overlay {
+    name: "HiByR4FontInter",
+    product_specific: true,
+    manifest: "font_inter/AndroidManifest.xml",
+    resource_dirs: ["font_inter/res"],
+}
+
+// Songate's card corners on Android's dialogs
+runtime_resource_overlay {
+    name: "HiByR4StyleAndroid",
+    product_specific: true,
+    manifest: "style_android/AndroidManifest.xml",
+    resource_dirs: ["style_android/res"],
+}
+
+// Songate's corners on SystemUI (tiles, notifications, power menu) + the player quick settings tiles
+runtime_resource_overlay {
+    name: "HiByR4StyleSystemUI",
+    product_specific: true,
+    manifest: "style_systemui/AndroidManifest.xml",
+    resource_dirs: ["style_systemui/res"],
+}
+
+// SongateOS defaults for new installs (settings provider + framework)
+runtime_resource_overlay {
+    name: "SongateOSDefaultsSettings",
+    product_specific: true,
+    manifest: "defaults_settings/AndroidManifest.xml",
+    resource_dirs: ["defaults_settings/res"],
+}
+
+runtime_resource_overlay {
+    name: "SongateOSDefaultsAndroid",
+    product_specific: true,
+    manifest: "defaults_android/AndroidManifest.xml",
+    resource_dirs: ["defaults_android/res"],
+}

@@ -1,0 +1,5 @@
+# HiBy R4 LED files the HiBy R4 service (back light, pattern index) and Settings (colour wheel) write directly.
+# service.sh makes them owned by system (uid 1000).
+genfscon sysfs /devices/platform/soc/soc:leds/led_enable u:object_r:hibyr4_led_file:s0
+genfscon sysfs /devices/platform/soc/4c80000.i2c/i2c-2/2-0030/leds/sgm31324-leds/led_pattern u:object_r:hibyr4_led_file:s0
+genfscon sysfs /devices/platform/soc/4c80000.i2c/i2c-2/2-0030/leds/sgm31324-leds/write_pattern u:object_r:hibyr4_led_file:s0

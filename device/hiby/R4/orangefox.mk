@@ -28,6 +28,14 @@ OF_FLASHLIGHT_ENABLE := 0
 # No userdata decryption in this build (same as TWRP): use microSD / USB OTG
 OF_SKIP_FBE_DECRYPTION := 1
 OF_DONT_PATCH_ENCRYPTED_DEVICE := 1
+# ...so OrangeFox's own folder (FoxFiles: AromaFM, Magisk add-on; logs, OTA, backups list) is on the microSD too:
+# internal storage (/sdcard) can't be read here. Without a card OrangeFox works, just without those extras.
+# The SongateOS OrangeFox package copies the FoxFiles to <card>/Fox/FoxFiles (2026-11-19).
+FOX_MISCELLANEOUS_ROOT_DIRECTORY := /external_sd
+# AromaFM can't draw on the R4: its only framebuffer is HiBy's hidden 640x480 "Virtual FB" (8 bpp); the screen is DRM-only.
+# It crashed (signal 11) when started from OrangeFox's menu (2026-11-19), so it isn't built in. OrangeFox's own file manager stays.
+# (OrangeFox reads this one from the environment: scripts/wsl_build_fox.sh exports it; kept here as the record)
+FOX_DELETE_AROMAFM := 1
 
 # Not a Xiaomi/MIUI device
 OF_DISABLE_MIUI_SPECIFIC_FEATURES := 1

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SongateOS: Songate plays in the background with a media foreground service; no battery optimisation for it -->
+<config>
+    <allow-in-power-save package="io.github.andrythebeast.songate" />
+</config>

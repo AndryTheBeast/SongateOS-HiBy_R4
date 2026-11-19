@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SongateOS: Songate's playback notification is allowed from the start -->
+<exceptions>
+    <exception package="io.github.andrythebeast.songate">
+        <permission name="android.permission.POST_NOTIFICATIONS" fixed="false" />
+    </exception>
+</exceptions>

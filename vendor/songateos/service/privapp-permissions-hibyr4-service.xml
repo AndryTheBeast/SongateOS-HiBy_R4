@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Privileged permissions of the HiBy R4 service (priv-app, system uid) -->
+<permissions>
+    <privapp-permissions package="com.andre.hibyr4.service">
+        <permission name="android.permission.BLUETOOTH_PRIVILEGED" />
+        <permission name="android.permission.CHANGE_OVERLAY_PACKAGES" />
+        <permission name="android.permission.MODIFY_AUDIO_ROUTING" />
+        <permission name="android.permission.MODIFY_DAY_NIGHT_MODE" />
+        <permission name="android.permission.NETWORK_SETTINGS" />
+        <permission name="android.permission.REBOOT" />
+        <permission name="android.permission.RECOVERY" />
+        <permission name="android.permission.WRITE_SECURE_SETTINGS" />
+    </privapp-permissions>
+</permissions>
