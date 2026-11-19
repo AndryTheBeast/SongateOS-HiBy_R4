@@ -74,11 +74,20 @@ python -m venv .venv
 
 ## Enter EDL on the R4
 
-1. Unplug the R4 and switch it off completely: hold **power** for about 15 seconds.
-2. Hold **all four buttons on the right side** together, and while holding them, plug the USB cable into the PC.
+1. Connect the R4 to the PC with the USB cable.
+2. Hold **Power + Previous + Play/Pause + Next** together, until the screen **flashes once**, then let go of all
+   buttons.
 3. The screen stays **black**. That's normal. Windows shows a new device `QUSB_BULK` (USB ID `05c6:9008`).
 
-To leave EDL, unplug the cable and hold power for 15 seconds; the player then starts normally.
+**To leave EDL:** hold **Power + Next** until the screen turns on, then let go. The player then starts normally.
+
+| | Buttons |
+|---|---|
+| Enter EDL (USB connected) | Power + Previous + Play/Pause + Next, until the screen flashes once; then let go |
+| Leave EDL | Power + Next, until the screen turns on; then let go |
+| Start the recovery (from off) | Power + Previous; when the screen turns on, let go of Power and keep Previous held |
+
+The player can't be restarted out of EDL by a command (`edl reset` doesn't bring it back): use the buttons.
 
 ## The one rule that matters: one command per EDL session
 
@@ -88,11 +97,12 @@ On the R4, the player stops answering **as soon as an edl command finishes**. Wi
 So for **every** edl command:
 
 1. Enter EDL (above).
-2. Run **one** edl command.
-3. When it ends, unplug, hold power 15 s, and enter EDL again before the next command.
+2. Run **one** edl command. One command can read or write several partitions, listed with commas (see "Restore one
+   partition").
+3. When it ends, leave EDL (Power + Next) and enter it again before the next command.
 
 If an edl command hangs on "Waiting for the device": close it (Ctrl+C, or end the leftover `python` process in Task
-Manager), unplug the R4, hold power 15 s, and start again.
+Manager), leave EDL with the buttons, enter it again, and start the command again.
 
 ## Make the backup
 
@@ -154,11 +164,15 @@ You'll rarely need this; most guides undo their own changes from fastbootd. EDL 
 any more.
 
 1. Check the file first: `sha256sum -c SHA256SUMS.txt` must say `OK` for it.
-2. Enter EDL, then write it (one partition per session):
+2. Enter EDL, then write it:
    ```
    .venv\Scripts\python edl.py w recovery_a D:\R4_backup\recovery_a.bin --memory=emmc --loader=LOADER
    ```
-3. Unplug, hold power 15 s, start the player.
+   Several partitions go in the same command, names and files each separated by commas:
+   ```
+   .venv\Scripts\python edl.py w boot_a,vbmeta_a D:\R4_backup\boot_a.bin,D:\R4_backup\vbmeta_a.bin --memory=emmc --loader=LOADER
+   ```
+3. Leave EDL with the buttons (Power + Next) and start the player.
 
 **Only ever write these:** `boot_a`, `recovery_a`, `dtbo_a`, `vbmeta_a`, `vbmeta_system_a`, `super`, `imagefv`,
 `metadata`, `misc`.
@@ -168,8 +182,9 @@ any more.
 `privdata2`, or the GPT. They're what makes the player start at all and what keeps EDL itself usable. A mistake there
 can't be fixed from the PC.
 
-Writing with EDL hasn't been tested end to end on an R4 for this guide yet: the project has only ever needed to read
-with it. Write only from your own verified backup, one partition at a time.
+Writing with EDL was tested end to end on an R4 (November 2026): HiBy's firmware was written back from a backup
+(`boot_a`, `vbmeta_a`, `recovery_a`, `recovery_b`, `imagefv_a`, `misc`, `super`) and read back identical, bit for bit.
+Write only from your own verified backup.
 
 ## Next
 

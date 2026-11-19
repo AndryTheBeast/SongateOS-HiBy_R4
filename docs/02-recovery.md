@@ -58,8 +58,9 @@ fastboot reboot recovery
 
 - After `adb reboot fastboot` the R4 shows the recovery screen with **fastbootd** at the top. Check with
   `fastboot devices` that the PC sees it.
-- The recovery starts. Next time, open it with `adb reboot recovery`, or from the power menu if your system offers
-  "Recovery".
+- The recovery starts. Next time, open it with `adb reboot recovery`, or with the buttons: from off, hold
+  **Power + Previous**; when the screen turns on, let go of Power and keep holding Previous until the recovery
+  appears.
 
 ## TWRP or OrangeFox
 

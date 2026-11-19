@@ -2,8 +2,9 @@
 
 ## The player doesn't start
 
-- **Stuck on the boot logo or restarting over and over:** connect it to a PC and run `adb reboot recovery` while it's
-  trying to start, then install the SongateOS zip again from the recovery. Your data stays.
+- **Stuck on the boot logo or restarting over and over:** start the recovery with the buttons: from off, hold
+  **Power + Previous**; when the screen turns on, let go of Power and keep holding Previous. Then install the SongateOS
+  zip again from the recovery. Your data stays.
 - **Nothing on the screen at all:** charge it for 30 minutes, then try again. If the recovery doesn't start either,
   restore it from your EDL backup ([guide 1](01-backup-edl.md#restore-one-partition)).
 - **Going back to HiBy's firmware:** [guide 7](07-back-to-stock.md).

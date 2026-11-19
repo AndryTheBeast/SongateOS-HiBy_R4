@@ -55,8 +55,10 @@ back is done with EDL, because the backup holds `super` as one 6 GB image.
 
    You can also write one partition per EDL session with `edl.py w <partition> <file>` instead, if you prefer to go
    step by step.
-6. **Unplug**, hold power 15 s, then start the player. The first start takes a few minutes, and you're back on HiBy's
-   firmware.
+6. Leave EDL with **Power + Next** (hold until the screen turns on, then let go). The first start takes a few minutes,
+   and you're back on HiBy's firmware. For a fully clean start, open HiBy's stock recovery first (from off, hold
+   **Power + Previous**, let go of Power when the screen turns on and keep holding Previous) and choose
+   **Wipe data/factory reset**. This exact path was tested on an R4 in November 2026.
 7. If Android shows **"Cannot load Android system"** instead, choose **Factory data reset**: some data from the other
    system was left behind.
 
