@@ -30,7 +30,7 @@ By <a href="https://github.com/AndryTheBeast"><b>AndryTheBeast</b></a> · versio
 
 > [!CAUTION]
 > **You install SongateOS at your own risk. Its author is not responsible for any bricked player, lost data or lost
-> warranty.** A player that stops starting almost always comes from skipped or rushed steps, not from the OS. Read
+> warranty.** A player that stops booting almost always comes from skipped or rushed steps, not from the OS. Read
 > every guide fully, then follow it exactly as written. Start with [Read this first](docs/00-read-first.md).
 
 ---

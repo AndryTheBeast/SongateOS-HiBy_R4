@@ -10,7 +10,7 @@ reversible. Done in a hurry, it can leave a player that doesn't start.
 or unusable ("bricked") player that results from installing, using or removing it.** Unlocking the bootloader and
 installing another system may also end your warranty with HiBy.
 
-A player that stops starting is almost never caused by SongateOS itself. It happens when steps are skipped, run in a
+A player that stops booting is almost never caused by SongateOS itself. It happens when steps are skipped, run in a
 different order, run on the wrong model, or "sped up". Every guide here was written step by step, on a real R4, for a
 reason.
 
