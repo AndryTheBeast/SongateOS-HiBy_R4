@@ -3,6 +3,10 @@
 A complete copy of **your own** player, taken before you change anything. It's your way back from any mistake,
 including a player that no longer starts.
 
+> [!CAUTION]
+> **Read [Read this first](00-read-first.md) before anything else.** You install SongateOS at your own risk; its author
+> isn't responsible for a player that no longer starts. Read each guide fully, then follow it exactly as written.
+
 > **Standard HiBy R4 only** (Qualcomm SM6125, eMMC). Not the R4 EVA: it uses different storage and its own files.
 >
 > **Your backup only fits your unit.** Partitions such as `persist`, `modemst1/2`, `fsg`, `devinfo` and `privdata`

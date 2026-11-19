@@ -68,7 +68,16 @@ fastboot reboot recovery
 | Look | classic | more modern, with more options |
 | Flash images and zips, terminal, file manager | yes | yes |
 | Backups to microSD or USB OTG | yes | yes |
-| Built-in extras | – | AromaFM file manager, Magisk installer in the zip version |
+| Built-in extras | – | Magisk installer and uninstaller, kept on the microSD card |
+| Its own folder (logs, extras) | – | `Fox/` on the microSD card |
+
+**OrangeFox on the R4 keeps its folder on the microSD card** (`Fox/`), because it can't read the internal storage. The
+SongateOS OrangeFox package copies its extras to `Fox/FoxFiles` on the card when you install it, and replaces them
+when you install a newer one. Without a card OrangeFox works the same, just without those extras. (OrangeFox's AromaFM
+file manager isn't included: it can't draw on the R4's screen. OrangeFox's own file manager does the same job.)
+
+**Both recoveries set their clock from SongateOS** (from recovery hook 5 on), so files they write get the right date
+instead of 1970.
 
 ## Switch between TWRP and OrangeFox
 
@@ -78,8 +87,11 @@ Once one of them is installed, you can switch from inside the recovery, without 
 2. In the recovery: **Install**, switch to the microSD, pick the zip, swipe to flash.
 3. **Reboot › Recovery**: the other recovery starts.
 
-The TWRP zip first checks it's a standard R4 and that its image is intact, and stops without writing anything if
-not. It then shows each step and reads the partitions back.
+The zips first check it's a standard R4 and that the image is intact, and stop without writing anything if not.
+They then show each step and read the partitions back.
+
+**From SongateOS, without a recovery menu:** Songate › Settings › Recovery lists TWRP and OrangeFox and switches to the
+one you pick, with the same checks (it also checks the package's SongateOS signature).
 
 **Both zips write `recovery_a` and `recovery_b`, on purpose.** The player runs on slot a, and that doesn't change: the
 zips never switch the active slot. But with the custom recovery in both slots, a player that ends up on slot b by

@@ -32,7 +32,13 @@ app ─► Android (AudioFlinger) ─► HiBy's audio HAL ─► Snapdragon DSP 
 4. **Touch and notification sounds are off by default.** Every system click made Android rebuild the bit-perfect
    output's route, and HiBy's driver re-routed the stream each time, which could cause about 3 s of noise.
 
-The patches are listed in [`system/README.md`](../system/README.md).
+5. **The 4.4 mm balanced output.** Android only knows the 3.5 mm jack, so with only the 4.4 mm plug in it calls the
+   output "speaker" (the R4 has no speaker, so that always means the 4.4 mm). SongateOS treats it like the 3.5 mm:
+   its own DAC volume step, bit-perfect allowed on it, and music pauses when you pull the plug. HiBy's driver itself
+   is told to use its balanced output whenever the 4.4 mm plug is in.
+
+The source changes are in [`vendor/songateos/patches`](../vendor/songateos/patches) (`apply_av.py` for the audio
+policy); the start-up scripts that set up HiBy's driver are in [`vendor/songateos/module`](../vendor/songateos/module).
 
 ## Checked on the device
 
@@ -59,4 +65,4 @@ off, the wired outputs work as before (Android's own volume, no bit-perfect).
 - On the R4, never cut `dumpsys media.audio_flinger` short (`| head`, `grep -m1`): HiBy's driver dumps into the same
   pipe and dies when it closes early, which restarts all audio. Save it to a file first.
 - The kernel logs every DAC volume change (`dmesg | grep plat_lch_vol_put`), which makes volume issues easy to see.
-- `system/tools/BpTest.java` plays a quiet bit-perfect test tone, to check the path without a music app.
+- `tools/dev/BpTest.java` plays a quiet bit-perfect test tone, to check the path without a music app.
