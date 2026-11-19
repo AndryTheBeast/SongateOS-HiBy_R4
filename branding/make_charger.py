@@ -5,8 +5,9 @@ Android's charger reads, when present (Android 12+):
     /product/etc/res/images/charger/<files>.png
 It clears the screen to black, centres the current frame, and draws the battery % with a bitmap font.
 Frames are ONE interlaced PNG (tEXt "Frames"); each frame has a battery-level range and the charger only plays the
-frames whose range holds the current level - so frame k (ring filled to F_k) gets range 0..F_k: the ring starts at
-the current level and sweeps up to full, then the full ring twinkles; repeated a few cycles, then the screen sleeps.
+frames whose range holds the current level. v4 (user, 2026-11-19): each level 0..99 % has its own few frames, its
+range just that level: the ring stays at the level (it moves on one step with each percent), and only the sparkles
+loop. 100 % has the "CHARGED" loop. All frames are loaded at start, so the frame is kept small (488 px, ~390 MB).
 
 Look: Songate's opening - the wordmark's gradient (coral -> amber -> cream), its glow, its four-pointed star at the
 head of the arc, Inter for text, "CHARGING" as the app's coral small caps (the "PLAYING" kicker); the ring centred on the screen.
@@ -22,11 +23,13 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from brand import ACCENT, ACCENT2, FRAUNCES, GLOW, TXT, W, H, Word, glow, inter, mix, sparkle, text
 
-FW, FH = 560, 560            # square frame, centred on the 750x1334 screen by the charger
+FW, FH = 488, 488            # square frame, centred on the 750x1334 screen by the charger (v4: smaller, 400 frames)
 RC = (FW / 2, FH / 2)        # ring centre = frame centre = screen centre (the user, 2026-11-14: centred, no name)
 R, THICK = 196, 16           # ring radius and stroke
 STEP = 2                     # % per fill frame: 0,2,...,100 -> 51 frames (v2: smoother, user 2026-11-15)
-HOLD = 16                    # frames of the full ring twinkling at the end
+HOLD = 16                    # frames of the full ring twinkling at the end (v3 sweep only)
+PHASES = 4                   # v4: sparkle frames per level, one seamless loop
+PHASE_MS = 160               # v4: per sparkle frame (a loop of 0.64 s)
 FONT_H = 84                  # percent digits cell height
 SUFFIX = os.environ.get("CHG_SUFFIX", "bolt")   # what the charger shows after the number: bolt / none / pct
 FONT = os.environ.get("CHG_FONT", "fraunces")   # number font: fraunces (v3) / inter (v2)
@@ -87,6 +90,16 @@ BASE = {k: np.asarray(base_layer(k), np.float32) for k in ("CHARGING", "CHARGED"
 TRACK_COL = np.array(mix(BLACK, TXT, .09), np.float32)
 
 
+LOOP = None   # v4: the phase 0..1 of a seamless loop, or None (v3's free-running t)
+
+
+def S(t, freq, ph=0.0):
+    """sin(t*freq + ph); in a v4 loop, a whole number of cycles per loop so the last frame meets the first."""
+    if LOOP is not None:
+        return math.sin(2 * math.pi * LOOP * max(1, round(freq / 4)) + ph)
+    return math.sin(t * freq + ph)
+
+
 def frame(fill, twinkle=0.0, t=0.0, label="CHARGING", digits=2):
     a = BASE[label].copy()
     track, arc = ring_masks(fill)
@@ -101,7 +114,7 @@ def frame(fill, twinkle=0.0, t=0.0, label="CHARGING", digits=2):
         pos = np.where((ang > fill) & (ang > .5), 0.0, ang) if fill < 1 else ang
         col = grad(pos / max(fill, 1e-3) if fill < 1 else pos)
         # a soft shimmer travelling along the arc (the wordmark's shine band)
-        sh = ((ang / max(fill, 1e-3)) - (t % 1.4 - .2)) / .16
+        sh = ((ang / max(fill, 1e-3)) - ((LOOP * 1.4 if LOOP is not None else t % 1.4) - .2)) / .16
         band = np.exp(-4.5 * sh * sh) * (1 - sh * sh) * (np.abs(sh) < 1)
         col = col + (255 - col) * (band * .55)[..., None]
         a += (col - a) * arc[..., None]
@@ -110,15 +123,15 @@ def frame(fill, twinkle=0.0, t=0.0, label="CHARGING", digits=2):
     if fill > 0:
         hx = RC[0] + R * math.sin(2 * math.pi * fill)
         hy = RC[1] - R * math.cos(2 * math.pi * fill)
-        size = 34 + 8 * math.sin(t * 9) + 14 * twinkle
+        size = 34 + 8 * S(t, 9) + 14 * twinkle
         glow(im, hx, hy, 46, mix(ACCENT, (255, 255, 255), .55), .45)     # the opening star's light
         sparkle(im, hx, hy, size, (255, 255, 255), 1.0)
         for i in range(5):
-            back = fill - .015 * (i + 1) - .01 * math.sin(t * 5 + i)
+            back = fill - .015 * (i + 1) - .01 * S(t, 5, i)
             if back <= 0:
                 continue
-            mx = RC[0] + (R + 10 * math.sin(i * 2.1 + t * 3)) * math.sin(2 * math.pi * back)
-            my = RC[1] - (R + 10 * math.cos(i * 1.7 + t * 3)) * math.cos(2 * math.pi * back)
+            mx = RC[0] + (R + 10 * S(t, 3, i * 2.1)) * math.sin(2 * math.pi * back)
+            my = RC[1] - (R + 10 * S(t, 3, i * 1.7 + math.pi / 2)) * math.cos(2 * math.pi * back)
             sparkle(im, mx, my, 6 - i * .7, mix(ACCENT2, (255, 255, 255), .5), .75 - i * .12)
     if FONT == "fraunces":
         number_sparkle(im, t, digits)
@@ -235,15 +248,15 @@ def number_sparkle(im, t, digits):
     """Sparkle around the number (drawn under it: the charger paints the digits on top in one colour):
     a warm glow behind it, a star at its top right (like the boot logo's "R4"), and a few motes twinkling."""
     cx, cy = RC[0], NUM_Y + FONT_H / 2
-    glow(im, cx, cy, 120, mix(BLACK, GLOW, .5), .30 + .06 * math.sin(t * 4))
+    glow(im, cx, cy, 120, mix(BLACK, GLOW, .5), .30 + .06 * S(t, 4))
     right = cx + (digits + 1) * CW / 2                          # the bolt's right edge
-    tw = .5 + .5 * math.sin(t * 6.0)
+    tw = .5 + .5 * S(t, 6.0)
     glow(im, right + 6, NUM_Y + 12, 30, mix(ACCENT, (255, 255, 255), .5), .25 + .2 * tw)
     sparkle(im, right + 6, NUM_Y + 12, 16 + 10 * tw, (255, 255, 255), 1.0)
     left = cx - (digits + 1) * CW / 2
     for k, (mx, my, ph, sz) in enumerate(((left - 12, NUM_Y + 62, 1.3, 7), (cx - 8, NUM_Y - 6, 2.6, 6),
                                           (right + 14, NUM_Y + 70, 4.1, 6), (left + 18, NUM_Y - 2, 5.2, 5))):
-        a = max(0.0, math.sin(t * 5.0 + ph))
+        a = max(0.0, S(t, 5.0, ph))
         if a > .05:
             sparkle(im, mx, my, sz * (.6 + .6 * a), mix(ACCENT2, (255, 255, 255), .6), .9 * a)
 
@@ -266,19 +279,20 @@ def main(out):
     # (image, ms, min_level, max_level): the charger plays, from the first frame that holds the level, every
     # following frame whose range holds it. Below 100 %: sweep from the level to full + a twinkle ("CHARGING");
     # at 100 %: only the "CHARGED" frames, the full ring with a slow twinkle.
+    global LOOP
     spec = []
-    levels = list(range(0, 101, STEP))
-    for i, lv in enumerate(levels):
-        # ease-out: quick sweep that slows as it reaches the top (display time grows towards 100 %)
-        ms = int(round(28 + 44 * (lv / 100) ** 3))
-        spec.append((frame(lv / 100, t=i * .05), ms, 0, min(lv, 99)))
-    for j in range(HOLD):
-        tw = math.sin(j / (HOLD - 1) * math.pi)
-        spec.append((frame(1.0, twinkle=tw, t=(len(levels) + j) * .05), 55, 0, 99))
-    CHARGED = 20
-    for j in range(CHARGED):
-        tw = math.sin(j / (CHARGED - 1) * math.pi)
-        spec.append((frame(1.0, twinkle=tw, t=j * .04, label="CHARGED", digits=3), 80, 100, 100))
+    # v4: each level 0..99 % its own loop of PHASES frames (range = that level only): the ring holds the level, the
+    # sparkles keep moving, and the ring moves on one step with each percent. 100 %: the CHARGED loop.
+    for lv in range(0, 100):
+        for k in range(PHASES):
+            LOOP = k / PHASES
+            spec.append((frame(lv / 100, twinkle=.5 + .5 * math.sin(2 * math.pi * LOOP), digits=1 if lv < 10 else 2),
+                         PHASE_MS, lv, lv))
+    for k in range(PHASES * 2):
+        LOOP = k / (PHASES * 2)
+        spec.append((frame(1.0, twinkle=.5 + .5 * math.sin(2 * math.pi * LOOP), label="CHARGED", digits=3),
+                     PHASE_MS, 100, 100))
+    LOOP = None
     frames = [s[0] for s in spec]
     lines = ["frame: %d %d %d" % (ms, lo, hi) for _, ms, lo, hi in spec]
     sheet, n = interlace(frames)
@@ -295,7 +309,7 @@ def main(out):
     py = int(ring_screen_y - FONT_H / 2 - 14)
     r, g, b = TXT
     desc = ["# SongateOS charging animation (generated by branding/make_charger.py)",
-            "animation: 3 2 charger/songate_scale",
+            "animation: 30 1 charger/songate_scale",            # v4: ~20 s of the level's loop, then sleep
             "fail: charger/songate_fail",
             "percent_display: c %d %d %d %d 255 charger/songate_font" % (py, r, g, b)] + lines
     open(os.path.join(val_dir, "animation.txt"), "w", newline="\n").write("\n".join(desc) + "\n")
@@ -319,7 +333,7 @@ def main(out):
         play = [s for s in spec if s[2] <= level <= s[3]]
         seq = [screen(s[0], level) for s in play]
         durs = [s[1] for s in play]
-        durs[0] *= 2                                           # first_frame_repeats = 2
+        seq, durs = seq * 4, durs * 4                          # a few loops in the preview
         small = [s.resize((W // 2, H // 2), Image.LANCZOS) for s in seq]
         small[0].save(os.path.join(out, "preview_charging_%d.gif" % level), save_all=True, append_images=small[1:],
                       duration=durs, loop=0)
