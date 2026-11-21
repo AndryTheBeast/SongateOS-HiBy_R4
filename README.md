@@ -182,7 +182,7 @@ hasn't published.
 
 - 🧱 **[LineageOS](https://lineageos.org)** and **[TrebleDroid](https://github.com/TrebleDroid)** (and Andy Yan's [lineage_build_unified](https://github.com/AndyCGYan/lineage_build_unified)): the base system.
 - 🛟 **[TWRP](https://twrp.me)** and **[OrangeFox Recovery](https://orangefox.download)**: the recoveries, built from their sources.
-- 🔓 **[Magisk](https://github.com/topjohnwu/Magisk)**: root, downloaded from its own releases when you choose it; never shipped.
+- 🔓 **[Magisk](https://github.com/topjohnwu/Magisk)** (GPL-3.0): root, downloaded from its own releases when you choose it in Settings › Root. SongateOS itself never includes it; only the OrangeFox recovery package carries OrangeFox's standard Magisk installer and uninstaller, as every OrangeFox build does.
 - 🧩 **[NikGapps](https://nikgapps.com)** and **[MindTheGapps](https://github.com/MindTheGapps)**: Google apps, downloaded from their makers when you choose them. SongateOS never hosts Google's apps.
 - 🎧 **[LibrePods](https://github.com/librepods-org/librepods)** and **[GalaxyBudsClient](https://github.com/timschneeb/GalaxyBudsClient)**: their published protocol notes made the earbud controls possible. SongateOS's code is its own; none of theirs is included.
 - 🔤 **Inter** and **Fraunces** (SIL Open Font Licence), as in Songate.
