@@ -10,18 +10,7 @@ The player starts straight into <a href="https://github.com/AndryTheBeast/Songat
 By <a href="https://github.com/AndryTheBeast"><b>AndryTheBeast</b></a> · version 2.1.0 · based on <a href="https://lineageos.org"><b>LineageOS 21</b></a> and <a href="https://github.com/TrebleDroid"><b>TrebleDroid</b></a><br>
 <a href="../../releases"><b>⬇️ Download</b></a> · <a href="https://github.com/AndryTheBeast/Songate"><b>🎵 Songate</b></a> · <a href="docs/00-read-first.md"><b>⚠️ Read this first</b></a></p>
 
-<!-- The film: on GitHub, replace the next line by dragging docs/songateos-film.mp4 here (the inline player; under 10 MB) -->
 https://github.com/user-attachments/assets/7fe84c88-fa13-4ba3-95f0-70fb62ad859c
-
-
-
-<p align="center">
-  <img src="branding/previews/boot_logo.png" width="200" alt="SongateOS boot logo">
-  &nbsp;
-  <img src="branding/previews/boot_animation.gif" width="200" alt="SongateOS boot animation">
-  &nbsp;
-  <img src="branding/previews/charging.gif" width="200" alt="SongateOS charging animation">
-</p>
 
 
 > [!IMPORTANT]
