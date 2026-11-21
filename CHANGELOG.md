@@ -2,44 +2,72 @@
 
 ## SongateOS 2.1.0 — first public release
 
-SongateOS's version now follows Songate's: this release ships **Songate 2.1.0**.
+**SongateOS 2.1.0** is here: the first public release of Android 14 for the HiBy R4, built around **Songate 2.1.0**. Signed with its own keys, the SongateOS boot logo in the installer, both jacks working the way HiBy's own system does, and bit-perfect that holds through fast skips and every format change.
 
-**Installing:** from HiBy's firmware, follow [guide 3](docs/03-install-os.md) (vbmeta, Format Data, then the zip).
-**From a SongateOS beta:** install the zip and **Format Data** once: from this release SongateOS is signed with its
-own keys, and the betas used Android's public test keys. Updates after this keep your data.
+**Only for the HiBy R4 standard model** (Snapdragon 665, eMMC), **never the R4 EVA.** **Tests were only made on HiBy's firmware of August 2026.** **The 4.4 mm line out wasn't tested on the device for this release** (its headphone mode was).
 
-### New
+> [!CAUTION]
+> **You install SongateOS at your own risk.** Read [Read this first](docs/00-read-first.md) and make your own **EDL backup** ([guide 1](docs/01-backup-edl.md)) before anything else: it is how you go back.
 
-- **Signed with SongateOS's own keys.** LineageOS's Trust no longer warns about public keys, and only SongateOS can
-  make updates the player accepts.
-- **The boot logo comes with the zip.** The first screen ("HIBY R4 · powered by Songate"), the low-battery screens
-  and the bootloader's debug and overheating screens are installed with the OS, as a patch over HiBy's stock logo
-  (checked before and after; any other logo is left alone).
-- **Both jacks work the way HiBy's own system does.** The 3.5 mm and 4.4 mm are registered as Android wired
-  headphones with HiBy's output names, so plugging in mid-song moves the music over, quick swaps work both ways and
-  bit-perfect runs on both. The two jacks now share one volume, as on HiBy OS.
-- **Line out on the 4.4 mm**, like the 3.5 mm: the headphone path at a fixed full volume with the line-out gain.
-- **Safer USB debugging:** a computer must be allowed on the player ("Allow USB debugging?") before it can connect.
-- **The HiBy R4 service runs as a system service again**, without the "SongateOS is running" notification. It is
-  updated only with the OS.
-- **Songate 2.1.0:** "Play when plugged in" (off by default) starts bit-perfect straight away; no more music starting
-  by itself when Bluetooth earphones switch off while wired ones are plugged in; smoother Settings; the LED follows
-  the accent colour with the screen off; no phantom play/next presses when unplugging.
+## 🆕 First install, from HiBy's firmware
 
-### Fixed
+1. 🛟 Put **OrangeFox** or **TWRP** in the recovery with fastboot: the `.img` files below ([guide 2](docs/02-recovery.md)).
+2. 📦 Follow [guide 3](docs/03-install-os.md): turn verification off in `vbmeta_a`, **Format Data**, then install **songateos-2.1.0-R4.zip** from the microSD.
+3. 🎵 Restart: the SongateOS logo, the boot animation, then Songate's setup.
 
-- Skipping songs fast with bit-perfect on could stop Android's audio server for a moment.
-- Changing from a 24-bit to a 16-bit song could lose bit-perfect for that song.
-- Switching line out back to headphones could leave the volume at full.
-- Bit-perfect is no longer offered with nothing plugged in (HiBy's driver played to its S/PDIF path, silently).
-- Plugging in headphones could restart Android when a Bluetooth lookup was refused.
-- The CPU governor stays on "schedutil" (HiBy's start-up switched it to "performance" after every boot).
-- Phone apps, the camera, the Via browser, LineageOS Music and Recorder are no longer installed for the user (the
-  player has no phone or camera); a network statistics log flood is gone.
+## 🔁 Coming from a SongateOS beta
 
-### Known limits
+From this release SongateOS is signed with **its own keys**; the betas used Android's public test keys. So this once: install the zip in the recovery, then **Wipe › Format Data**, and set up Songate again (Bluetooth devices need pairing again). Your music on the microSD stays. Updates after this keep your data.
 
-- **4.4 mm line out** wasn't tested on the device for this release (the 4.4 mm headphone mode was).
-- **USB speakers that charge the player:** after unplugging one, the player was seen once not to sleep until the next
-  restart. USB DACs that don't charge it are fine.
-- See also [Known limits](README.md) in the README.
+## ⬆️ Updates from now on
+
+**Songate › Settings › Updates** finds the new version, shows what changed, downloads it to the microSD card, checks it and installs it through the recovery. Your music, apps and settings stay. No card? Update from a computer with `adb sideload` ([guide 3](docs/03-install-os.md#updates-need-a-microsd-card)).
+
+## ✨ SongateOS 2.1.0
+
+- 🔐 Signed with SongateOS's own keys: LineageOS's Trust no longer warns, and only SongateOS can make updates your player accepts
+- 🖼️ The boot logo comes with the installer: "HIBY R4 · powered by Songate", the low-battery screens and the bootloader's debug and overheating screens, all redrawn in Songate's look
+- 🎧 Both jacks work the way HiBy's own system does: plug in mid-song and the music moves over, swap jacks quickly both ways, bit-perfect on 3.5 mm and 4.4 mm
+- 🔌 Line out on the 4.4 mm too, like the 3.5 mm: a fixed full volume with the line-out gain
+- 🛡️ USB debugging asks first: a computer must be allowed on the player before it can connect
+- 🔕 No more "SongateOS is running" notification: the player's service runs as part of the system again
+- 🎵 Songate 2.1.0 inside, the version SongateOS now shares
+
+## 🎚️ Sound
+
+- ⏭️ Skip as fast as you like: bit-perfect holds, and Android's audio server no longer stops for a moment
+- 🎼 From a 24-bit to a 16-bit song (and back), every song stays bit-perfect at its own rate
+- 🔊 The 3.5 mm and 4.4 mm share one volume, as on HiBy OS. Turn it down before plugging in sensitive earphones
+- 🔈 Back from line out to headphones, your own volume comes back (it could stay at full)
+- 🔇 Nothing plugged in? Bit-perfect waits for a jack (HiBy's driver played silently to its digital output)
+
+## 🎵 Songate 2.1.0
+
+- ▶️ Play when plugged in (Settings › Playback, off by default): the music starts when a jack goes in, bit-perfect straight away
+- 🎧 No more music starting by itself when Bluetooth earphones switch off while wired ones are plugged in
+- 💡 The status light follows your accent colour with the screen off
+- 👆 No phantom play or next presses when you pull a plug
+- 🧈 Smoother Settings, and the sleep timer fixed
+
+## 🧹 Under the hood
+
+- 📞 Plugging in headphones can no longer restart Android when a Bluetooth lookup is refused
+- ⚡ The CPU governor stays on "schedutil" (HiBy's start-up put it on "performance" after every boot)
+- 🗑️ Phone apps, the camera, the Via browser, LineageOS Music and Recorder are gone for you: the R4 has no phone or camera
+- 📉 A network statistics log flood is gone
+
+## ⚠️ Known limits
+
+- 🔌 **USB speakers that charge the player:** after unplugging one, the R4 was seen once not to sleep until the next restart. USB DACs that don't charge it are fine
+- 📶 Bluetooth 5.0: no LE Audio. AAC was tested
+- 🗂️ Updates and Google apps need a microSD card (the recovery can't read the encrypted internal storage)
+- 📖 More in the README's [Known limits](README.md)
+
+## 📦 Files
+
+| File | What |
+|---|---|
+| `songateos-2.1.0-R4.zip` | 🎵 SongateOS 2.1.0: install from the recovery, or let the player update itself |
+| `OrangeFox-R12.0-Unofficial-R4.img` · `TWRP-3.7-Unofficial-R4.img` | 🛟 the recoveries, for the first install with fastboot |
+| `songateos-recovery-orangefox-2026.11.19.3.zip` · `songateos-recovery-twrp-2026.11.19.3.zip` | 🔁 the same recoveries as signed packages: flash from a recovery, or switch in Songate › Settings › Recovery |
+| `SHA256SUMS.txt` | 🔍 check every file against it before you use it |
