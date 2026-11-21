@@ -15,6 +15,16 @@ including a player that no longer starts.
 
 Reading is safe: this guide only **reads** from the player. Nothing on it changes.
 
+> [!IMPORTANT]
+> **First, get the firehose loader.** The R4 needs one exact file, **`prog_firehose_ddr_car_radio.elf`**, to talk to
+> the PC in EDL mode. It's Qualcomm's file, so this project can't host it: get it from the
+> [XDA HiBy R4 thread](https://xdaforums.com/t/4746303/), then **check its SHA-256** before anything else
+> ([how](#the-loader)):
+>
+> `2a2123157b81d78701a54822305749d751d789e1cd83c15cea5bf891efab30e0`
+>
+> A different checksum means a different file: **don't use it**, and never try other loaders.
+
 Tested on Windows 11 with bkerler/edl 3.62. Linux should work the same way without the driver steps, but hasn't been
 tested for this guide.
 
@@ -45,6 +55,10 @@ On Windows (PowerShell): `Get-FileHash .\prog_firehose_ddr_car_radio.elf`. On Li
 
 **If the checksum is different, don't use the file.** Never try other loaders found online: a wrong loader can fail in
 ways that are hard to get out of.
+
+**The link no longer works?** Search the XDA HiBy R4 forum for the file name, or ask there, and keep only a file whose
+SHA-256 is exactly the one above. Keep your own copy of it next to your backup: you'll need the same loader to write
+the backup back.
 
 ### The edl tool
 
