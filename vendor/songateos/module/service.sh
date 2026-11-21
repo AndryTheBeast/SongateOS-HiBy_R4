@@ -1,10 +1,10 @@
 #!/system/bin/sh
 # SongateOS (HiBy R4): the root service started by init (songateos.rc, late_start). Was the Magisk module's service.sh.
 # Audio: overlaid audio_policy_configuration.xml adds Wired Headset/Headphones ports.
-#        HiBy's vendor audio HAL only switches its engine to the analog headphone/balanced output when it
-#        receives "connect=8;<Name>" (Name = Headphone | Balance | Lineout | BalanceLo). HiBy's own system did
-#        that; here we send it via AudioFlinger setParameters (binder txn 21) as the audioserver uid (1041),
-#        because AudioFlinger strips "connect" from other callers.
+#        HiBy's vendor audio HAL drives the analog output named in "<Name>=;connect=8" (Name = Headphone | Balance).
+#        Android sends that itself: its WiredAccessoryManager (SongateOS patch apply_wired.py) registers the jacks as
+#        wired headphones with the name as the address, as HiBy's own system does. (The R4's driver has no line-out
+#        outputs: "Lineout" and "BalanceLo" power the DAC off, so both line outs are the headphone path at full volume.)
 # Battery: let the health HAL read the CW2015/MP2731 sysfs nodes (labeled generic "sysfs") and HiBy's props.
 LOG=/data/local/tmp/hiby_r4_fix.log
 [ -f $LOG ] && mv -f $LOG $LOG.prev   # keep the previous boot's log (e.g. after a freeze)
@@ -34,13 +34,14 @@ fi
 ( while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done
   stop health-hal-2-1; sleep 1; start health-hal-2-1
   echo "$(date) health HAL restarted: $(getprop init.svc.health-hal-2-1)" >> $LOG
-  # LineageOS Trust warned "This build was signed with public keys" at every boot: true for these dev builds (AOSP test
-  # keys; own release keys are planned before the public release, user 2026-11-19). Until then its signature alert is
-  # off by default (trust_warnings 1 = SELinux alert only, unset = both). Set once; a user's own choice is kept.
-  if ! content query --uri content://lineagesettings/secure --where "name=\"trust_warnings\"" 2>/dev/null | grep -q value=; then
-    content insert --uri content://lineagesettings/secure --bind name:s:trust_warnings --bind value:s:1 >/dev/null 2>&1
-    echo "$(date) Trust: build-signature alert off by default (trust_warnings=1)" >> $LOG
-  fi
+  # CPU governor: HiBy's vendor start-up script puts all eight cores on "performance" (always full speed, a warm
+  # player and a shorter battery life). schedutil lets idle cores slow down (user 2026-11-20). After boot_completed
+  # and a pause, so HiBy's script has run; written to both clusters directly (its cpu_tuner property is closed to us).
+  sleep 10
+  for c in 0 4; do echo schedutil > /sys/devices/system/cpu/cpufreq/policy$c/scaling_governor 2>/dev/null; done
+  echo "$(date) CPU governor: $(cat /sys/devices/system/cpu/cpufreq/policy0/scaling_governor)/$(cat /sys/devices/system/cpu/cpufreq/policy4/scaling_governor)" >> $LOG
+  # LineageOS Trust's build-signature alert stays on (default): from 2.1.0 SongateOS is signed with its own release keys
+  # ("dev-keys"; the betas used AOSP's public test keys and switched the alert off with trust_warnings=1).
   # No SIM / no radio on the R4: stop Qualcomm's VoLTE (IMS) and mobile-data daemons that idle for nothing.
   # NOT touched (Wi-Fi on SM6125 runs through the modem subsystem): modem, rmt_storage, tftp_server, cnss-daemon,
   # pd_mapper, vendor.cnd. Undo: delete this loop and reboot.
@@ -57,6 +58,30 @@ fi
   for p in com.hiby.music com.hiby.dlna.dlnarendor com.hiby.instructions; do
     pm list packages --user 0 2>/dev/null | grep -qx "package:$p" || continue
     pm uninstall --user 0 "$p" >/dev/null 2>&1 && echo "$(date) removed HiBy app $p for the user" >> $LOG
+  done
+  # Phone apps (the R4 has no SIM; user decision): the system image keeps them, so they're removed for the user the
+  # same way, every boot while still installed (0.1.0-beta.9 on a fresh install showed Phone and Messaging).
+  # com.android.phone (TeleService) stays: Android needs it. Undo: pm install-existing <package>.
+  #   dialer, messaging, contacts + backups | SIM toolkit, SIM dialogs | emergency alerts | carrier, MMS, WAP push |
+  #   emergency info | IMS entitlement, ONS, QNS | MediaTek in-call (not this device) | phh's qcril AM, Qualcomm IWLAN
+  PL=$(pm list packages --user 0 2>/dev/null)
+  for p in com.android.dialer com.android.messaging com.android.contacts com.android.calllogbackup \
+           org.calyxos.backup.contacts com.android.stk com.android.simappdialog com.android.cellbroadcastreceiver \
+           com.android.cellbroadcastreceiver.module com.android.carrierdefaultapp com.android.mms.service \
+           com.android.smspush com.android.emergency com.android.imsserviceentitlement com.android.ons \
+           com.android.telephony.qns org.lineageos.mediatek.incallservice me.phh.qcrilam vendor.qti.iwlan; do
+    echo "$PL" | grep -qx "package:$p" || continue
+    pm uninstall --user 0 "$p" >/dev/null 2>&1 && echo "$(date) removed phone app $p for the user" >> $LOG
+  done
+  # Other apps SongateOS doesn't use (user decision 2026-11-20), the same way:
+  #   mark.via                     Via browser (HiBy's, on the vendor partition)
+  #   org.lineageos.aperture       Camera (the R4 has no camera) + its lens launcher (googlecamera.fishfood)
+  #   org.lineageos.eleven         LineageOS Music (Songate is the player)
+  #   org.lineageos.recorder       Recorder (user decision 2026-11-20)
+  for p in mark.via org.lineageos.aperture com.google.android.apps.googlecamera.fishfood org.lineageos.eleven \
+           org.lineageos.recorder; do
+    echo "$PL" | grep -qx "package:$p" || continue
+    pm uninstall --user 0 "$p" >/dev/null 2>&1 && echo "$(date) removed unused app $p for the user" >> $LOG
   done
   # SongateOS defaults, once on a new install (after Format Data): the settings Android has no build-time default for
   if [ ! -f /data/songateos/first_boot_done ]; then
@@ -82,13 +107,6 @@ fi
     echo "$(date) SongateOS first-boot defaults set" >> $LOG
   fi ) &
 
-send_param() {  # $1 = key/value string for the audio HAL
-  # AudioFlinger takes "connect" only from the audioserver uid: init service songateos_afparam (user audioserver,
-  # songateos.rc) sends sys.songateos.af_param. Wait for a previous one to finish first.
-  i=0; while [ "$(getprop init.svc.songateos_afparam)" = "running" ] && [ $i -lt 30 ]; do sleep 0.1; i=$((i+1)); done
-  setprop sys.songateos.af_param "$1"; start songateos_afparam
-  echo "$(date) sent: $1" >> $LOG
-}
 # Audio first: start as soon as AudioFlinger is up (well before boot_completed).
 until service check media.audio_flinger 2>/dev/null | grep -q ": found"; do sleep 1; done
 sleep 1
@@ -193,13 +211,6 @@ pval() { echo "$1" | grep "^\[sys\.hibyr4\.$2\]" | sed 's/^[^:]*: \[\(.*\)\]$/\1
     fi
     sleep 0.15
   done ) &
-# Android's own "connect=8" (when it registers the headphones) makes HiBy's HAL reset its output name to
-# "Default" (= S/PDIF). So we watch whether the audio policy currently has the wired headphones connected,
-# and re-send our "connect=8;<Name>" every time that goes from not-connected to connected (after Android's).
-apm_wired() {
-  ap=$(dumpsys media.audio_policy 2>/dev/null)   # read to the end first (an early-closed pipe can kill HiBy's HAL)
-  echo "$ap" | sed -n '/Available output devices/,/Available input devices/p' | grep -q WIRED_HEADPHONE
-}
 # Bluetooth audio (2026-11-15): AudioFlinger takes its master volume from the first audio HAL it loads (HiBy's
 # primary HAL reports 0.4). The primary outputs apply master volume in HiBy's HAL, but the Bluetooth (sysbta)
 # output applies it in software, where 0.4 left every player "muted by master" = silent Bluetooth. Wired output
@@ -212,7 +223,6 @@ master_vol() {
 lastas=""
 last=""
 lastpid=""
-lastapm=0
 n=0
 POL=/vendor/etc/audio_policy_configuration.xml
 while true; do
@@ -227,6 +237,16 @@ while true; do
       killall audioserver; miss=0
     fi
   fi
+  # Every ~10 s: CPU governor (user choice 2026-11-20: schedutil). HiBy's post_boot script ("add by ringsd") sets
+  # every core to performance each time Android reports boot completed, so also after a system restart (0.1.0-beta.9:
+  # a system_server crash put performance back for good). Put schedutil back once that script has finished.
+  if [ $((n % 10)) -eq 5 ] && [ "$(getprop init.svc.qcom-post-boot)" != "running" ]; then
+    for c in 0 4; do
+      g=/sys/devices/system/cpu/cpufreq/policy$c/scaling_governor
+      old=$(cat $g 2>/dev/null)
+      [ "$old" = "schedutil" ] || { echo schedutil > $g 2>/dev/null; echo "$(date) CPU governor policy$c was $old -> $(cat $g)" >> $LOG; }
+    done
+  fi
   # every 3 s: status LED (charging indicator / screen state / custom pattern), writes only on change
   [ $((n % 3)) -eq 0 ] && sh $BIN/hiby_settings.sh led_refresh >/dev/null 2>&1
   # audioserver (re)started -> AudioFlinger read master volume 0.4 from the HAL again (see master_vol above)
@@ -236,10 +256,15 @@ while true; do
     # wired volume in the DAC: Android may have reset the volume behaviour; the service checks and sets it up again
     am broadcast -n com.andre.hibyr4.service/com.andre.hibyr4sound.DacVolume >/dev/null 2>&1
   fi
-  # If the vendor audio HAL restarts (e.g. low memory), it forgets the output name -> resend it.
+  # If the vendor audio HAL restarts (low memory, a sample-rate switch), it forgets its settings -> apply them again,
+  # at the end of this round (~12 s). Android restores the plugged-in output itself, with its name.
   apid=$(pidof android.hardware.audio.service)
   if [ -n "$apid" ] && [ "$apid" != "$lastpid" ]; then
-    [ -n "$lastpid" ] && { echo "$(date) audio HAL restarted ($lastpid -> $apid), re-sending output + settings" >> $LOG; last=""; sleep 2; sh $BIN/hiby_settings.sh apply_all >> $LOG 2>&1; }
+    if [ -n "$lastpid" ]; then
+      echo "$(date) audio HAL restarted ($lastpid -> $apid), applying the settings again" >> $LOG
+      i=0; until service check media.audio_flinger 2>/dev/null | grep -q ": found"; do sleep 0.1; i=$((i+1)); [ $i -gt 50 ] && break; done
+      reapply=1
+    fi
     lastpid=$apid
   fi
   h=$(cat /sys/class/switch/h2w/state 2>/dev/null)
@@ -247,30 +272,42 @@ while true; do
   out35=$(grep '^out35=' $DIR/settings.conf 2>/dev/null | tail -1 | cut -d= -f2)
   out44=$(grep '^out44=' $DIR/settings.conf 2>/dev/null | tail -1 | cut -d= -f2)
   if [ -n "$b" ] && [ "$b" != "0" ]; then
-    [ "$out44" = "bal_lo" ] && want=BalanceLo || want=Balance
+    want=Balance     # also for 4.4 mm line out: "BalanceLo" powers the DAC off on the R4 (tested 2026-11-20)
   elif [ -n "$h" ] && [ "$h" != "0" ]; then
     want=Headphone   # also for 3.5 mm line out: HiBy's "Lineout" mode never powers the DAC on the R4
   else want=none
   fi
-  rm -f $DIR/reroute
-  # 3.5 mm line out = headphone path at fixed full volume (the HiBy R4 service sets Android's "full volume"
-  # behaviour for the wired headphones; the user's own headphone volume stays saved) + DAC gain = line-out level.
-  # The service also ends it the moment the plug is pulled; this is the backup (out35 -> headphone).
+  # Outputs are registered with Android by its own WiredAccessoryManager (SongateOS patch apply_wired.py, the way
+  # HiBy's system does it): wired headphones with the address Headphone / Balance, which Android passes to HiBy's HAL
+  # ("Balance=;connect=8") and re-routes running streams. This loop only reports the output and handles the line outs.
+  # Line out (3.5 mm: out35=lineout, 4.4 mm: out44=bal_lo) = headphone path at fixed full volume (the HiBy R4 service
+  # sets Android's "full volume" behaviour for the wired headphones while the line-out jack is the one in use; the
+  # user's own headphone volume stays saved) + line-out gain = line-out level. Shown as Lineout / BalanceLo.
+  # The service also ends it the moment the plug is pulled; this is the backup (out35 -> headphone, out44 -> bal_po),
+  # so earphones plugged in later never get full volume.
   if [ "$out35" = "lineout" ] && [ "$want" != "Headphone" ]; then
     sh $BIN/hiby_settings.sh set out35 headphone >/dev/null 2>&1; out35=headphone
     echo "$(date) 3.5 mm line out: plug removed -> back to headphone" >> $LOG
   fi
-  lo=0; [ "$out35" = "lineout" ] && [ "$want" = "Headphone" ] && lo=1
-  if [ "$lo" = "1" ] && [ ! -f $DIR/lo_active ]; then
-    touch $DIR/lo_active
+  if [ "$out44" = "bal_lo" ] && [ "$want" != "Balance" ]; then
+    sh $BIN/hiby_settings.sh set out44 bal_po >/dev/null 2>&1; out44=bal_po
+    echo "$(date) 4.4 mm line out: plug removed -> back to headphones" >> $LOG
+  fi
+  shown=$want; lo=0
+  [ "$out35" = "lineout" ] && [ "$want" = "Headphone" ] && { lo=1; shown=Lineout; }
+  [ "$out44" = "bal_lo" ] && [ "$want" = "Balance" ] && { lo=1; shown=BalanceLo; }
+  if [ "$lo" = "1" ] && [ "$(cat $DIR/lo_active 2>/dev/null)" != "$shown" ]; then
+    echo "$shown" > $DIR/lo_active
     g=$(sh $BIN/hiby_settings.sh get lo_gain); setprop vendor.audio.hiby.hw.gain "$g"
+    setprop sys.hibyr4.st_output "$shown"   # LineOut reads it: full volume only for the jack in line-out mode
     am broadcast -n com.andre.hibyr4.service/com.andre.hibyr4sound.LineOut >/dev/null 2>&1
-    echo "$(date) 3.5 mm line out ON (fixed full volume, gain $g)" >> $LOG
+    echo "$(date) $shown line out ON (fixed full volume, gain $g)" >> $LOG
   elif [ "$lo" = "0" ] && [ -f $DIR/lo_active ]; then
     rm -f $DIR/lo_active
     g=$(sh $BIN/hiby_settings.sh get gain); setprop vendor.audio.hiby.hw.gain "$g"
+    setprop sys.hibyr4.st_output "$shown"
     am broadcast -n com.andre.hibyr4.service/com.andre.hibyr4sound.LineOut >/dev/null 2>&1
-    echo "$(date) 3.5 mm line out OFF (normal volume, gain $g)" >> $LOG
+    echo "$(date) line out OFF (normal volume, gain $g)" >> $LOG
   fi
   # sample rate of the current stream (set by HiBy's HAL) for the Settings page header
   if [ $((n % 2)) -eq 1 ]; then
@@ -310,38 +347,22 @@ while true; do
       lastusb=""
     fi
   fi
-  # every 2 s: did Android (re)connect the wired headphones? Then our name must be sent again, after it.
-  if [ $((n % 2)) -eq 0 ]; then
-    if apm_wired; then apm=1; else apm=0; fi
-    if [ "$apm" != "$lastapm" ]; then
-      echo "$(date) audio policy wired headphones: $lastapm -> $apm" >> $LOG
-      [ "$apm" = "1" ] && last=""
-      lastapm=$apm
-    fi
-    # "Volume after restart = fixed level": once per boot, when the headphones are registered after boot
-    if [ "$apm" = "1" ] && [ -z "$volset" ] && [ "$(getprop sys.boot_completed)" = "1" ]; then
-      volset=1
-      if [ "$(sh $BIN/hiby_settings.sh get vol_restore)" = "fixed" ]; then
-        pct=$(sh $BIN/hiby_settings.sh get vol_boot); steps=$(getprop ro.config.media_vol_steps); steps=${steps:-25}
-        idx=$(( (pct * steps + 50) / 100 ))
-        cmd media_session volume --stream 3 --set $idx >/dev/null 2>&1
-        echo "$(date) start volume: $pct% -> $idx/$steps" >> $LOG
-      fi
+  # "Volume after restart = fixed level": once per boot, when an output is plugged in after boot
+  if [ "$want" != "none" ] && [ -z "$volset" ] && [ "$(getprop sys.boot_completed)" = "1" ]; then
+    volset=1
+    if [ "$(sh $BIN/hiby_settings.sh get vol_restore)" = "fixed" ]; then
+      pct=$(sh $BIN/hiby_settings.sh get vol_boot); steps=$(getprop ro.config.media_vol_steps); steps=${steps:-25}
+      idx=$(( (pct * steps + 50) / 100 ))
+      cmd media_session volume --stream 3 --set $idx >/dev/null 2>&1
+      echo "$(date) start volume: $pct% -> $idx/$steps" >> $LOG
     fi
   fi
-  if [ "$want" != "$last" ]; then
-    [ -n "$last" ] && [ "$last" != "none" ] && send_param "disconnect=8;$last"
-    [ "$want" != "none" ] && [ -n "$last" ] && sleep 0.3
-    [ "$want" != "none" ] && send_param "connect=8;$want"
-    # A running stream is not re-routed by the HAL when only the name changes (e.g. mode switch in the app),
-    # so also set HiBy's output switch directly (engine stays on its analog target for all four modes).
-    case $want in
-      Headphone) sel=Headset ;; Lineout) sel=Lineout ;; Balance) sel=Balance ;; BalanceLo) sel=BalanceLo ;; *) sel="" ;;
-    esac
-    [ -n "$sel" ] && [ -n "$last" ] && [ "$last" != "none" ] && tinymix -D 0 "Output Select" "$sel" >/dev/null 2>&1 && echo "$(date) Output Select -> $sel" >> $LOG
-    echo "$(date) h2w=$h balance=$b -> $want" >> $LOG
-    setprop sys.hibyr4.st_output "$want"   # shown in the Settings page header
-    last=$want
+  if [ "$shown" != "$last" ]; then
+    # (a mode switch no longer re-registers the 4.4 mm with Android: it stays "Balance", only the volume changes)
+    echo "$(date) h2w=$h balance=$b -> $shown" >> $LOG
+    setprop sys.hibyr4.st_output "$shown"   # shown in the Settings page header; LineOut / the API read it
+    last=$shown
   fi
+  [ "$reapply" = "1" ] && { reapply=0; sh $BIN/hiby_settings.sh apply_all >> $LOG 2>&1; }
   sleep 1
 done

@@ -13,12 +13,26 @@
 
 - **No sound after plugging in:** pull the plug out fully and in again; the R4 switches its output when the jack
   changes. Check Songate's output line shows the jack you're using.
-- **Very quiet on the 4.4 mm:** update to 0.1.0-beta.8 or newer (it gave the 4.4 mm its own DAC volume).
+- **Same volume on both jacks:** that's how it works (as on HiBy's own system): to Android both are wired
+  headphones. Turn it down before plugging in sensitive earphones.
+- **Line out is loud and the volume keys do nothing:** line out is a fixed full volume. Switch the jack back to
+  headphones in Sound & DAC; pulling the plug does it too.
 - **Clicks when a sound plays:** touch and notification sounds are off by default for this reason; leave them off.
+
+## Battery
+
+- **The battery drains fast and the player gets warm while "asleep":** restart it. This was seen once after
+  unplugging a USB speaker that also charged the player (its USB port stayed awake). If you can repeat it, a log
+  helps (below).
 
 ## Updates and Google apps
 
 - **"Updates need a microSD card":** put one in, or update from a computer ([guide 3](03-install-os.md#updates-need-a-microsd-card)).
+- **"vbmeta_a flags are 00000000, need 00000003":** Android's verification is still on (HiBy's firmware has it on).
+  Nothing was written. Turn it off as in [guide 3, step 1](03-install-os.md#first-install-coming-from-hibys-firmware),
+  then install again.
+- **"Cannot load Android system" or restarting over and over after the first install:** the data partition is still
+  HiBy's, or from a SongateOS beta (different keys). In the recovery: **Wipe › Format Data**, type `yes`, then restart.
 - **An update didn't install:** the logs are next to the zip on the card (`songateos_install.log` and
   `songateos_recovery_tail.log`). Attach them to a bug report.
 - **Google apps crash after installing:** restart once. If it keeps happening, remove them and install them again
@@ -28,7 +42,8 @@
 
 1. On the R4: open Android's **Settings** app (in Songate's Apps page) › About › tap the build number seven times,
    then turn on **USB debugging** in System › Developer options.
-2. On a computer with [Android platform tools](https://developer.android.com/tools/releases/platform-tools):
+2. Connect it to a computer with [Android platform tools](https://developer.android.com/tools/releases/platform-tools)
+   and allow the computer on the R4 ("Allow USB debugging?"), then:
    ```
    adb logcat -d > songateos-log.txt
    ```

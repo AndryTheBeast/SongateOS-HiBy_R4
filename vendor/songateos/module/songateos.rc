@@ -13,10 +13,3 @@ service songateos /system_ext/bin/songateos/service.sh
     group root
     seclabel u:r:phhsu_daemon:s0
 
-# One AudioFlinger setParameters as the audioserver uid (started by service.sh with sys.songateos.af_param).
-service songateos_afparam /system_ext/bin/songateos/afparam.sh
-    user audioserver
-    group audio
-    seclabel u:r:phhsu_daemon:s0
-    disabled
-    oneshot

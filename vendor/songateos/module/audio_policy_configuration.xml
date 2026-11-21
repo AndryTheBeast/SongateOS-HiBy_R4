@@ -154,7 +154,15 @@
                 </devicePort>
                 <devicePort tagName="Wired Headset" type="AUDIO_DEVICE_OUT_WIRED_HEADSET" role="sink">
                 </devicePort>
-                <devicePort tagName="Wired Headphones" type="AUDIO_DEVICE_OUT_WIRED_HEADPHONE" role="sink">
+                <!-- SongateOS (HiBy R4): one wired-headphones device per jack/mode, with the name HiBy's HAL needs as the
+                     address. Android 14 passes a declared device's own address to the HAL ("Balance=;connect=8"); with
+                     one address-less device it sent a bare "connect=8" and the HAL chose the 3.5 mm. The jacks are
+                     registered with these addresses by WiredAccessoryManager (apply_wired.py), as on HiBy's system. -->
+                <devicePort tagName="Wired Headphones" type="AUDIO_DEVICE_OUT_WIRED_HEADPHONE" role="sink" address="Headphone">
+                </devicePort>
+                <devicePort tagName="Wired Headphones Balance" type="AUDIO_DEVICE_OUT_WIRED_HEADPHONE" role="sink" address="Balance">
+                </devicePort>
+                <devicePort tagName="Wired Headphones BalanceLo" type="AUDIO_DEVICE_OUT_WIRED_HEADPHONE" role="sink" address="BalanceLo">
                 </devicePort>
                 <devicePort tagName="BT SCO" type="AUDIO_DEVICE_OUT_BLUETOOTH_SCO" role="sink">
                 </devicePort>
@@ -192,14 +200,20 @@
             <routes>
                 <route type="mix" sink="Earpiece"
                        sources="primary output,raw,deep_buffer,mmap_no_irq_out,voip_rx"/>
-                <!-- SongateOS: on the R4 "Speaker" is the 4.4 mm balanced output, so it gets bit_perfect too (2026-11-19) -->
+                <!-- SongateOS: on the R4 "Speaker" is the 4.4 mm balanced output. No bit_perfect here (0.1.0-beta.9,
+                     2026-11-20): HiBy's HAL resets its output name to "Default" (S/PDIF) when the bit-perfect stream
+                     opens on this device, and the stream then runs silent and too fast. The normal path plays fine. -->
                 <route type="mix" sink="Speaker"
-                       sources="primary output,raw,deep_buffer,bit_perfect,compressed_offload,mmap_no_irq_out,voip_rx"/>
+                       sources="primary output,raw,deep_buffer,compressed_offload,mmap_no_irq_out,voip_rx"/>
                 <route type="mix" sink="Speaker Safe"
                        sources="primary output,raw,deep_buffer,compressed_offload,mmap_no_irq_out,voip_rx"/>
                 <route type="mix" sink="Wired Headset"
                        sources="primary output,raw,deep_buffer,bit_perfect,compressed_offload,mmap_no_irq_out,voip_rx"/>
                 <route type="mix" sink="Wired Headphones"
+                       sources="primary output,raw,deep_buffer,bit_perfect,compressed_offload,mmap_no_irq_out,voip_rx"/>
+                <route type="mix" sink="Wired Headphones Balance"
+                       sources="primary output,raw,deep_buffer,bit_perfect,compressed_offload,mmap_no_irq_out,voip_rx"/>
+                <route type="mix" sink="Wired Headphones BalanceLo"
                        sources="primary output,raw,deep_buffer,bit_perfect,compressed_offload,mmap_no_irq_out,voip_rx"/>
                 <route type="mix" sink="BT SCO"
                        sources="primary output,raw,deep_buffer,voip_rx"/>

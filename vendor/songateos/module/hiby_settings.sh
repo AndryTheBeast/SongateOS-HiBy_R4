@@ -158,10 +158,12 @@ apply_key() {
                    a=${v#-}; s=""; [ "$v" -lt 0 ] && s="-"
                    if [ "$a" = "10" ]; then mb="${s}1.0"; elif [ "$a" = "0" ]; then mb="0"; else mb="${s}0.$a"; fi
                    settings put system master_balance "$mb" ;;
-    out44)         setprop vendor.audio.hiby.hw.bal_po_lo_switch "$v"; touch $DIR/reroute ;;
+    # 4.4 mm line out = the "Balance" path at fixed full volume (service.sh), like the 3.5 mm. The R4's driver ignores
+    # bal_po_lo_switch (tested 2026-11-20: bal_lo still plays at headphone level); set anyway, as HiBy's system does.
+    out44)         setprop vendor.audio.hiby.hw.bal_po_lo_switch "$v" ;;
     # 3.5 mm line out = the headphone path at fixed full volume (service.sh). HiBy's own "Lineout" output mode
     # never powers the DAC on the R4 (i2c error -107, HAL write errors, froze once) - never used.
-    out35)         touch $DIR/reroute ;;
+    out35)         ;;
     lo_gain)       echo "$v" > $S/lo_gain
                    [ -f $DIR/lo_active ] && setprop vendor.audio.hiby.hw.gain "$v" ;;
     dsd_comp)      setprop vendor.audio.hiby.hw.dsd_compensate "$v" ;;

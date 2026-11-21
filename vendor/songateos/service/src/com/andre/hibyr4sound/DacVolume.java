@@ -145,6 +145,10 @@ public class DacVolume extends BroadcastReceiver {
         sMax = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         boolean wired = LineOut.wiredPresent(am);
         int idx = LineOut.deviceVolume(c, wired ? AudioDeviceInfo.TYPE_WIRED_HEADPHONES : SPEAKER);
+        // back from line out: Android still holds the maximum for the wired output; the user's own step is LineOut's
+        // saved one until LineOut has written it back
+        int pending = wired ? LineOut.pendingHeadphoneVolume(c) : -1;
+        if (pending >= 0) idx = pending;
         if (idx < 0) idx = am.getStreamVolume(AudioManager.STREAM_MUSIC);
         sIdx = idx;
         write(true);   // DAC first: Android's software volume still applies until the hand-over, so it can only be quieter
@@ -167,6 +171,8 @@ public class DacVolume extends BroadcastReceiver {
                         // the DAC follows the output that is playing: 3.5 mm while its plug is in, else the 4.4 mm
                         if ((dt == SPEAKER) == wiredNow) return;
                         int user = LineOut.deviceVolume(c, wiredNow ? AudioDeviceInfo.TYPE_WIRED_HEADPHONES : SPEAKER);
+                        int pend = wiredNow ? LineOut.pendingHeadphoneVolume(c) : -1;
+                        if (pend >= 0) user = pend;   // back from line out, not yet restored: never line out's max
                         Log.i(TAG, "volume reported " + v + " (type " + dt + "), saved step " + user + ", behaviour " + b);
                         if (b != BEHAVIOR_ABSOLUTE || user < 0) return;
                         sIdx = user;
@@ -184,7 +190,7 @@ public class DacVolume extends BroadcastReceiver {
             Class<?> ada = Class.forName("android.media.AudioDeviceAttributes");
             for (int t : DAC_DEVICES) {
                 int ti = LineOut.deviceVolume(c, t);
-                if (ti < 0) ti = idx;
+                if (ti < 0 || (pending >= 0 && t != SPEAKER)) ti = idx;   // wired: the user's step, not line out's max
                 set.invoke(advm, ada.getConstructor(int.class, int.class, String.class).newInstance(ROLE_OUTPUT, t, ""),
                         volumeInfo(ti, sMax), EX, sListener, false);
             }

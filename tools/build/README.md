@@ -12,7 +12,15 @@ Linux, or WSL2 with Ubuntu 22.04. About 300 GB free and 32 GB of RAM or more. Th
 
 Songate's APK comes from [Songate's releases](https://github.com/AndryTheBeast/Songate/releases); it isn't stored here.
 
-The release key is yours to make (`ota/make_release_key.sh`) and must never be committed. Zips signed with another key
+**Android's signing keys.** Without your own, the image is signed with Android's public test keys (LineageOS's Trust
+warns, and anyone could sign updates for it). Make a set with the source tree's `development/tools/make_key`, for
+`releasekey platform shared media networkstack sdk_sandbox bluetooth nfc` (plus `testkey` as a copy of `releasekey`),
+in a folder outside the tree, with a `keys.mk` holding
+`PRODUCT_DEFAULT_DEV_CERTIFICATE := vendor/lineage-priv/keys/releasekey`, then link that folder as
+`vendor/lineage-priv/keys` (LineageOS includes `keys.mk` from there). Keep the keys safe and never commit them:
+an image signed with other keys can't be installed over one signed with these without wiping the data.
+
+The update key is yours to make (`ota/make_release_key.sh`) and must never be committed. Zips signed with another key
 still install by hand from a recovery, but the player's updater only accepts zips signed with the key whose
 certificate is in `ota/keys/`.
 

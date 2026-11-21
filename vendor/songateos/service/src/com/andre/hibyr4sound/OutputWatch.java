@@ -53,6 +53,7 @@ final class OutputWatch {
                 }
                 app.sendBroadcast(new Intent().setClassName(app, DacVolume.class.getName()));
                 last = now;
+                SystemApi.notify("output");   // Songate's output line and bit-perfect mark follow the jack
             }
         }, "Output watch");
         t.setDaemon(true);

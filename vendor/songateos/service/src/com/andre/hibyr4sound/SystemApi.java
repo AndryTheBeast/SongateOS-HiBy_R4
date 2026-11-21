@@ -61,7 +61,7 @@ final class SystemApi {
     static final String PERM = "com.andre.hibyr4.permission.SYSTEM_SETTINGS";
     static final String BASE = "content://com.andre.hibyr4.settings/system/";
     static final int API = 1;
-    static final String[] CAPS = { "wifi", "bt", "bt_codec", "display", "earbuds", "output", "storage", "time", "about", "usb", "hold", "recovery", "root", "theme", "power", "ota", "setup", "apps", "gapps" };
+    static final String[] CAPS = { "wifi", "bt", "bt_codec", "display", "earbuds", "output", "storage", "time", "about", "usb", "hold", "recovery", "root", "theme", "power", "ota", "setup", "apps", "gapps", "power_sleep" };
 
     private static Context sApp;
     private static Handler sH;
@@ -1120,9 +1120,17 @@ final class SystemApi {
         return t == AudioDeviceInfo.TYPE_USB_DEVICE || t == AudioDeviceInfo.TYPE_USB_HEADSET || t == AudioDeviceInfo.TYPE_USB_ACCESSORY;
     }
 
-    /** "wired", "bt:<address>", "usb:<address>", or null for outputs that aren't offered (speaker, earpiece, …). */
+    /** The 4.4 mm is plugged in: the module says so (Android routes the 4.4 mm as its "speaker", see DacVolume). */
+    static boolean balanced44() {
+        return Updater.sysprop("sys.hibyr4.st_output", "").startsWith("Balance");
+    }
+
+    /** "wired" (3.5 mm), "wired44" (4.4 mm), "bt:<address>", "usb:<address>", or null for outputs that aren't offered.
+     *  Since the next build after 0.1.0-beta.9, both jacks are Android's wired headphones, told apart by the address
+     *  (Headphone | Balance | BalanceLo), the way HiBy's system registers them (WiredAccessoryManager patch). The
+     *  "speaker" is no output: it only plays when nothing is plugged in. */
     private static String outId(int type, String address) {
-        if (wired(type)) return "wired";
+        if (wired(type)) return address != null && address.startsWith("Balance") ? "wired44" : "wired";
         if (type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) return "bt:" + address;
         if (usb(type)) return "usb:" + address;
         return null;
@@ -1218,15 +1226,17 @@ final class SystemApi {
             if (id == null || !seen.add(id)) continue;
             Bundle o = new Bundle();
             o.putString("id", id);
-            if ("wired".equals(id)) {
-                // 3.5 and 4.4 mm are one Android device: the module knows which one is plugged in and how it's used
+            if ("wired".equals(id) || "wired44".equals(id)) {
+                // both = Android's wired headphones (address Headphone / Balance / BalanceLo); the module knows the mode
                 String out = Updater.sysprop("sys.hibyr4.st_output", "");
                 boolean lineout35 = "lineout".equals(Updater.sysprop("sys.hibyr4.out35", "headphone"));
-                String kind = "Balance".equals(out) ? "balanced_44" : "BalanceLo".equals(out) ? "balanced_lineout_44"
+                String kind = "wired44".equals(id) ? ("BalanceLo".equals(out) ? "balanced_lineout_44" : "balanced_44")
                         : lineout35 ? "lineout_35" : "headphone_35";
                 o.putString("kind", kind);
                 o.putString("name", kind.equals("balanced_44") ? "Headphones 4.4 mm" : kind.equals("balanced_lineout_44")
                         ? "Line out 4.4 mm" : kind.equals("lineout_35") ? "Line out 3.5 mm" : "Headphones 3.5 mm");
+                // both jacks are wired headphones to Android now, so bit-perfect is offered on both (4.4 mm: to be
+                // checked on the R4; as the speaker it failed, HiBy's HAL reset its output name there)
                 o.putString("bitperfect", bitPerfect ? "1" : "0");
                 o.putString("dac_volume", bitPerfect && !kind.contains("lineout") ? "1" : "0");
             } else if (id.startsWith("bt:")) {
@@ -1247,6 +1257,8 @@ final class SystemApi {
         }
         b.putParcelableArrayList("outputs", list);
         b.putString("active", active);
+        // "0" when nothing is plugged in and nothing is connected: Android then plays to an output with no jack behind it
+        b.putString("connected", active.isEmpty() ? "0" : "1");
         b.putString("choice", choice);
         return b;
     }
@@ -1269,11 +1281,17 @@ final class SystemApi {
 
     // ------------------------------------------------------------------ power
     static Bundle power(String arg) {
-        if (arg == null) return err("bad_arg", "restart, shutdown, recovery or recovery_check");
+        if (arg == null) return err("bad_arg", "restart, shutdown, sleep, recovery or recovery_check");
         switch (arg) {
             case "restart": return fromError(Updater.rebootAsync(sApp, "system"));
             case "recovery": return fromError(Updater.rebootAsync(sApp, "recovery"));
             case "recovery_check": return fromError(Updater.rebootAsync(sApp, "recovery_check"));
+            case "sleep":   // the screen off, like a short press of power (Songate's sleep timer; 2026-11-19)
+                try {
+                    PowerManager.class.getMethod("goToSleep", long.class)
+                            .invoke(sApp.getSystemService(PowerManager.class), android.os.SystemClock.uptimeMillis());
+                    return ok();
+                } catch (Throwable t) { Log.w(TAG, "sleep", t); return err("failed", "Couldn't turn the screen off"); }
             case "shutdown":
                 sH.post(() -> {
                     try {
@@ -1282,7 +1300,7 @@ final class SystemApi {
                     } catch (Throwable t) { Log.w(TAG, "shutdown", t); }
                 });
                 return ok();
-            default: return err("bad_arg", "restart, shutdown, recovery or recovery_check");
+            default: return err("bad_arg", "restart, shutdown, sleep, recovery or recovery_check");
         }
     }
 

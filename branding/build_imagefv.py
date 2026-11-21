@@ -92,13 +92,15 @@ def replace_bmp4(inner, name, png_path):
     off, = struct.unpack_from("<I", inner, o + 10)
     hs, w, h, planes, bpp, comp = struct.unpack_from("<IiiHHI", inner, o + 14)
     used, = struct.unpack_from("<I", inner, o + 46)
-    assert bpp == 4 and comp == 0 and h > 0 and off == 14 + hs + 4 * used, (name, bpp, comp, off, used)
+    ncol = used or 16                       # biClrUsed 0 = the full 16-colour palette (stock Debug* bitmaps)
+    assert bpp == 4 and comp == 0 and h > 0 and off == 14 + hs + 4 * ncol, (name, bpp, comp, off, used)
     im = Image.open(png_path)
     assert im.mode == "P" and im.size == (w, h), (name, im.mode, im.size)
     idx = np.asarray(im, dtype=np.uint8)
-    assert idx.max() < used, (name, int(idx.max()), used)
-    pal = im.getpalette()[:3 * used]
-    for k in range(used):
+    assert idx.max() < ncol, (name, int(idx.max()), ncol)
+    pal = im.getpalette()[:3 * ncol]
+    pal += [0] * (3 * ncol - len(pal))
+    for k in range(ncol):
         r, g, b = pal[3 * k:3 * k + 3]
         inner[o + 14 + hs + 4 * k:o + 14 + hs + 4 * k + 4] = bytes([b, g, r, 0])
     rowb = ((w * 4 + 31) // 32) * 4
@@ -194,7 +196,7 @@ def verify(img, orig, png, symbols=None):
 if __name__ == "__main__":
     orig_path, png, out = sys.argv[1:4]
     sym_dir = sys.argv[4] if len(sys.argv) > 4 else None    # optional: dir of <name>.png 4-colour battery symbols
-    symbols = {os.path.basename(p)[:-4]: p for p in glob.glob(os.path.join(sym_dir, "battery_symbol_*.png"))} if sym_dir else {}
+    symbols = {os.path.basename(p)[:-4]: p for p in glob.glob(os.path.join(sym_dir, "*_symbol*.png"))} if sym_dir else {}
     orig = open(orig_path, "rb").read()
     img, used = build(orig, png, symbols)
     bmp = verify(img, orig, png, symbols)

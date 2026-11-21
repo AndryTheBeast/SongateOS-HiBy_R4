@@ -18,10 +18,11 @@ echo "=== source changes (idempotent)"
 P=vendor/songateos/patches
 python3 $P/apply_av.py frameworks/av
 python3 $P/apply_settings.py packages/apps/Settings
-for p in fonts charger lineage_props hold board bt_aap bootwait; do python3 $P/apply_$p.py .; done
+for p in fonts charger lineage_props hold board bt_aap bootwait netstats telecom wired adb; do python3 $P/apply_$p.py .; done
 export LC_ALL=C
 set +e; source build/envsetup.sh >/dev/null; set -e
 lunch songateos_r4-ap2a-userdebug
 export LINEAGE_BUILD=songateos_r4   # LineageOS's board config needs it, as for lineage_* products
-WITH_ADB_INSECURE=true m -j$J systemimage
+# secure adb (2.1.0): no WITH_ADB_INSECURE; apply_adb.py removes the GSI base's ro.adb.secure=0
+m -j$J systemimage
 ls -l "$OUT/system.img"; sha256sum "$OUT/system.img"

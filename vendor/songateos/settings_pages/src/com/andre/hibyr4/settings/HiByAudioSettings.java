@@ -142,6 +142,7 @@ public class HiByAudioSettings extends HbFragment {
         // ---- header card: what is playing where ----
         String out = Hb.get("st_output", "none");
         String title = "Balance".equals(out) ? "Balanced 4.4 mm" : "BalanceLo".equals(out) ? "Balanced line out"
+                : "Lineout".equals(out) ? "Line out 3.5 mm"
                 : "Headphone".equals(out) ? ("lineout".equals(Hb.get("out35", "headphone")) ? "Line out 3.5 mm"
                 : "Headphone 3.5 mm") : "No headphones";
         String rate = Hb.get("st_rate", "");

@@ -42,13 +42,6 @@ sh_binary {
     system_ext_specific: true,
 }
 
-sh_binary {
-    name: "songateos_afparam.sh",
-    src: "afparam.sh",
-    filename: "afparam.sh",
-    sub_dir: "songateos",
-    system_ext_specific: true,
-}
 
 // HiBy's audio policy with the Wired Headset/Headphones ports and the bit_perfect mixPort (template; post-fs-data.sh
 // copies it to /data/songateos, where the native-rate setting edits it, and bind-mounts it over /vendor's)

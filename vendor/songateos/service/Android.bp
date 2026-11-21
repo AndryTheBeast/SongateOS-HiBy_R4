@@ -10,9 +10,9 @@ android_app {
     platform_apis: true,
     aaptflags: [
         "--version-code",
-        "97",
+        "102",
         "--version-name",
-        "97.0",
+        "102.0",
     ],
     // reflection on hidden APIs throughout: no shrinking
     optimize: {

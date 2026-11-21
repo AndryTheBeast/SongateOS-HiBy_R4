@@ -16,5 +16,7 @@ android_app_import {
         "TrebuchetQuickStep",
         "Launcher3QuickStep",
         "LineageSetupWizard",
+        // LineageOS's equalizer: Songate and the HiBy R4 service have their own (beta.9)
+        "AudioFX",
     ],
 }

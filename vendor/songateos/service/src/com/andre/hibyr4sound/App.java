@@ -25,7 +25,9 @@ public class App extends Application {
         SystemTheme.start(this); // SongateOS system colours: the exact palette on top of Android's (see SystemTheme)
         SystemApi.start(this);   // SongateOS system API for Songate: Wi-Fi, Bluetooth, output, power (see SystemApi)
         Setup.onStart(this);     // SongateOS first-boot setup state + the safety net for Android's setup flags
-        KeepAlive.start(this);   // keeps this process running while the service is not persistent (betas)
+        // persistent from 2.1.0: the betas' "SongateOS is running" channel (KeepAlive) is removed if an update left it
+        try { getSystemService(android.app.NotificationManager.class).deleteNotificationChannel("songateos_system"); }
+        catch (RuntimeException e) { /* nothing to remove */ }
         Switcher.init(this);     // SongateOS app switcher overlay (driven by the gesture strip)
         GestureNav.start(this);  // SongateOS gestures: swipe up = home, swipe up and hold = Songate's app switcher
         NotifAccess.grantOnce(this);  // Songate's notification listener allowed once (media from other apps)

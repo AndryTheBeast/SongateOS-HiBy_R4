@@ -1,5 +1,5 @@
 # The SongateOS layer on top of the LineageOS 21 TrebleDroid GSI. See work/SONGATEOS_IMAGE_PLAN.md.
-SONGATEOS_VERSION := 0.1.0-beta.8
+SONGATEOS_VERSION := 2.1.0
 LOCAL_SONGATEOS := vendor/songateos
 
 PRODUCT_SYSTEM_PROPERTIES += \
@@ -35,7 +35,6 @@ PRODUCT_PACKAGES += \
     songateos_hiby_settings.sh \
     songateos_ota_bridge.sh \
     songateos_hold_switch.sh \
-    songateos_afparam.sh \
     songateos_audio_policy_configuration.xml \
     songateos_gpio-keys-nowake.kl \
     songateos_bootanimation_hold.zip \

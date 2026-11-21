@@ -32,10 +32,24 @@ app ─► Android (AudioFlinger) ─► HiBy's audio HAL ─► Snapdragon DSP 
 4. **Touch and notification sounds are off by default.** Every system click made Android rebuild the bit-perfect
    output's route, and HiBy's driver re-routed the stream each time, which could cause about 3 s of noise.
 
-5. **The 4.4 mm balanced output.** Android only knows the 3.5 mm jack, so with only the 4.4 mm plug in it calls the
-   output "speaker" (the R4 has no speaker, so that always means the 4.4 mm). SongateOS treats it like the 3.5 mm:
-   its own DAC volume step, bit-perfect allowed on it, and music pauses when you pull the plug. HiBy's driver itself
-   is told to use its balanced output whenever the 4.4 mm plug is in.
+5. **Both jacks, registered the way HiBy's own system does it.** HiBy's Android 12 registers every analog output as
+   Android wired headphones, with the output's name as the device address: `Headphone` (3.5 mm) and `Balance`
+   (4.4 mm). Android then hands that name to HiBy's driver (`Balance=;connect=8`), which picks the output from it.
+   SongateOS does the same (Android's `WiredAccessoryManager` and the address hand-over to HiBy's older driver are
+   patched). One output at a time, the 4.4 mm before the 3.5 mm. So:
+   - plugging in mid-song moves the music over, and quick swaps between the jacks work both ways;
+   - pulling a plug pauses the music;
+   - **the 3.5 mm and 4.4 mm share one volume** (to Android they're the same kind of device), as on HiBy's own system;
+   - bit-perfect is offered on both, and not when nothing is plugged in (HiBy's driver would play to its S/PDIF path).
+6. **Line out.** HiBy's own line-out outputs (`Lineout`, `BalanceLo`) switch the DAC off on the R4, and its driver
+   ignores the line-out switch for the 4.4 mm. So on SongateOS, line out on either jack is the headphone path at a
+   **fixed full volume** plus the line-out gain: the volume keys do nothing, your headphone volume is kept and comes
+   back when you switch to headphones, and pulling the plug always switches back to headphones (so earphones plugged
+   in later never get full volume).
+7. **Two fixes in Android's audio server.** Skipping songs fast with bit-perfect on could stop Android's audio
+   server for a moment (a track the mixer had already dropped), and changing from a 24-bit to a 16-bit song could
+   lose bit-perfect for that song (Android reopened the bit-perfect output in a format HiBy's driver refuses). Both
+   are patched.
 
 The source changes are in [`vendor/songateos/patches`](../vendor/songateos/patches) (`apply_av.py` for the audio
 policy); the start-up scripts that set up HiBy's driver are in [`vendor/songateos/module`](../vendor/songateos/module).

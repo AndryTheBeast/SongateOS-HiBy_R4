@@ -111,7 +111,7 @@ mistake can still start the recovery and go back with **Reboot › Slot A**. Wit
 
 **Not yet:** decrypting internal storage (`/data`). The recovery can't read your files there. Use the microSD or a USB
 stick for anything you want to flash or back up. Don't choose "Format Data" unless you mean to erase everything on the
-player.
+player. (The first install of SongateOS needs it once: [guide 3](03-install-os.md#first-install-coming-from-hibys-firmware).)
 
 ## Undo: back to the stock recovery
 

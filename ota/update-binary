@@ -4,7 +4,8 @@
 #
 # What it may write, and nothing else:
 #   - system_a   (logical partition in super; grown with lptools only if the new image is larger)
-#   - imagefv_a  (boot logo) only if the zip has one AND the R4 already shows a SongateOS logo we know
+#   - imagefv_a  (boot logo) only if the zip has a logo patch AND the R4 shows exactly HiBy's stock logo or a
+#                SongateOS logo the patch knows (sha256 before, and the patched result checked before writing)
 #   - /metadata/songateos/ota.result (small text file for the updater)
 # Never: slot b, boot/dtbo/vbmeta, recovery, xbl, tz, rpm, hyp, abl, devcfg, keymaster, persist, modemst1/2,
 # fsg, devinfo, frp, privdata1/2, the GPT, or userdata (your apps, settings and Magisk stay as they are).
@@ -102,7 +103,7 @@ trace "ota.prop: $(tr '\n' ';' < $TMP/ota.prop)"
 VERSION=$(prop version); KIND=$(prop kind)
 SYS_SIZE=$(prop system_size); SYS_SHA=$(prop system_sha256)
 SYS_PARTS=$(prop system_parts); SYS_PART_SIZE=$(prop system_part_size)   # pieces (2026-11-19); empty = one system.img
-FV_SHA=$(prop imagefv_sha256); FV_FROM=$(prop imagefv_replace)
+FV_SHA=$(prop imagefv_sha256); FV_FROM=$(prop imagefv_from); FV_MAP=$(prop imagefv_map); FV_WANT=$(prop imagefv_size)
 ui_print "Version $VERSION ($KIND)"
 [ "$(prop device)" = "R4" ] || abort "zip is not for the HiBy R4"
 
@@ -141,6 +142,11 @@ case "$VBF" in 00000003) ;; *) abort "vbmeta_a flags are $VBF, need 00000003 (se
 [ -b "$SYS_DEV" ] || abort "system_a is not mapped ($SYS_DEV)"
 ui_print "  HiBy R4, slot a, vbmeta flags 3: OK"
 
+# Sizes go past 2 GB: some recoveries' shells (OrangeFox's) do 32-bit arithmetic and get them wrong (0.1.0-beta.8
+# on OrangeFox: system_a wasn't grown and a piece's position went negative). All large-number work goes to awk.
+gt() { awk -v a="$1" -v b="$2" 'BEGIN { exit !(a + 0 > b + 0) }'; }   # $1 > $2
+kb() { awk -v a="$1" -v b="${2:-0}" 'BEGIN { printf "%d", a / 1024 + b }'; }   # bytes -> kB, plus $2 kB
+
 # system image in the zip
 if [ "$KIND" != "test" ]; then
   echo "$SYS_SIZE" | grep -qE '^[0-9]+$' || abort "bad system_size in ota.prop"
@@ -154,13 +160,41 @@ if [ "$KIND" != "test" ]; then
     unzip -l "$ZIP" system.img 2>/dev/null | grep -q system.img || abort "zip has no system.img"
   fi
   CUR=$(blockdev --getsize64 $SYS_DEV)
-  if [ "$SYS_SIZE" -gt "$CUR" ]; then
+  if gt "$SYS_SIZE" "$CUR"; then
     command -v lptools >/dev/null 2>&1 || abort "new system ($SYS_SIZE) is larger than system_a ($CUR) and this recovery has no lptools"
     NEED_RESIZE=1
   fi
-  if [ -n "$FV_SHA" ]; then
-    unzip -l "$ZIP" imagefv.img 2>/dev/null | grep -q imagefv.img || abort "ota.prop names a logo but the zip has none"
+fi
+
+# boot logo (read only here): the patch is applied to a copy in RAM; only an exact result is written later.
+# HiBy's signed logo container is never in the zip, only SongateOS's own bytes (imagefv.patch + imagefv_map).
+FV_ACTION=none
+if [ -n "$FV_SHA" ]; then
+  HAVE_FV=$(sha256sum $FV_DEV 2>>$TRACE | cut -d' ' -f1)
+  FV_SIZE=$(blockdev --getsize64 $FV_DEV 2>>$TRACE)
+  trace "imagefv: have $HAVE_FV size $FV_SIZE, want $FV_SHA"
+  if [ "$HAVE_FV" = "$FV_SHA" ]; then
+    FV_ACTION=same
+  elif [ "$FV_SIZE" != "$FV_WANT" ] || ! echo ",$FV_FROM," | grep -q ",$HAVE_FV,"; then
+    FV_ACTION=unknown
+  else
+    unzip -p "$ZIP" imagefv.patch > $TMP/imagefv.patch 2>>$TRACE
+    dd if=$FV_DEV of=$TMP/imagefv.img bs=1048576 2>>$TRACE
+    pos=0; ok=1
+    for r in $(echo "$FV_MAP" | tr ',' ' '); do
+      off=${r%%:*}; len=${r##*:}
+      dd if=$TMP/imagefv.patch of=$TMP/imagefv.img bs=1 skip=$pos seek=$off count=$len conv=notrunc 2>>$TRACE || ok=0
+      pos=$((pos + len))   # small numbers (the logo is 2 MB): safe in the recovery's 32-bit shell arithmetic
+    done
+    [ "$pos" = "$(stat -c %s $TMP/imagefv.patch)" ] || ok=0
+    if [ "$ok" = 1 ] && [ "$(sha256sum $TMP/imagefv.img | cut -d' ' -f1)" = "$FV_SHA" ]; then
+      FV_ACTION=write
+    else
+      FV_ACTION=bad
+    fi
+    rm -f $TMP/imagefv.patch
   fi
+  trace "imagefv: $FV_ACTION"
 fi
 
 if [ "$KIND" = "test" ]; then
@@ -172,16 +206,39 @@ fi
 
 # ---------------- write ----------------
 umount /system_root 2>/dev/null; umount /system 2>/dev/null; umount /mnt/system 2>/dev/null
+# OrangeFox mounts system_a on /apex when HiBy's stock system is installed; that keeps system_a busy and it can't be
+# mapped again at its new size (first install from stock, 2026-11-19). Let go of every mount of system_a.
+for m in $(grep -E "^($SYS_DEV|$(readlink -f $SYS_DEV)) " /proc/mounts | cut -d' ' -f2); do umount "$m" 2>/dev/null; done
 if [ "$NEED_RESIZE" = 1 ]; then
   ui_print "Growing system_a to $SYS_SIZE bytes..."
-  lptools resize system_a "$SYS_SIZE" || abort "lptools could not grow system_a (not enough free space in super?)"
+  if ! lptools resize system_a "$SYS_SIZE"; then
+    # Coming from HiBy's firmware, super still holds its unused update leftovers (the "-cow" partitions, ~1.9 GB on
+    # the R4; first install from stock 2026-11-19). They only matter while an Android update is being merged, and
+    # recovery can't be in the middle of one, unless the update state says so: then stop and touch nothing.
+    [ -e /metadata/ota/snapshot-boot ] && abort "super has no free space and an Android update is still being merged; start Android once, then try again"
+    COWS=""
+    for p in system_a-cow vendor_a-cow system_ext_a-cow product_a-cow odm_a-cow system_b-cow vendor_b-cow system_ext_b-cow product_b-cow odm_b-cow; do
+      [ -e /dev/block/mapper/$p ] && COWS="$COWS $p" && continue
+      lptools map $p >/dev/null 2>&1 && COWS="$COWS $p"
+    done
+    [ -n "$COWS" ] || abort "lptools could not grow system_a (not enough free space in super)"
+    # super's table (its first 1 MiB) next to the zip first, so the removal can be undone
+    SUPER=/dev/block/by-name/super
+    dd if=$SUPER of="$(dirname "$ZIP")/super_table_before_songateos.bin" bs=1048576 count=1 2>/dev/null       && trace "super table saved next to the zip"
+    ui_print "Freeing space in super: removing HiBy's unused update leftovers ($COWS )..."
+    for p in $COWS; do
+      lptools unmap $p >/dev/null 2>&1
+      r=$(lptools remove $p 2>&1 | tail -1); trace "remove $p: $r"
+    done
+    lptools resize system_a "$SYS_SIZE" || abort "lptools could not grow system_a (not enough free space in super?)"
+  fi
   # the recovery mapped system_a at its start; resize only changes super's table, so map it again at the new size
   # (0.1.0-beta.4: the old mapping kept the old size and the install stopped here)
   lptools unmap system_a >/dev/null 2>&1
   lptools map system_a >/dev/null 2>&1
   [ -b "$SYS_DEV" ] || lptools map system_a
   NEW=$(blockdev --getsize64 $SYS_DEV)
-  [ "$NEW" -ge "$SYS_SIZE" ] || abort "system_a is still too small ($NEW)"
+  gt "$SYS_SIZE" "$NEW" && abort "system_a is still too small ($NEW)"
 fi
 write_ok "$SYS_DEV" || abort "internal: refusing to write $SYS_DEV"
 blockdev --setrw $SYS_DEV 2>/dev/null
@@ -190,7 +247,9 @@ result writing "system_a"
 # The recoveries' unzip (Android's ziptool) holds the whole entry in RAM when it writes to a pipe: an image larger
 # than the free RAM aborted with nothing written (0.1.0-beta.4, 2.97 GB image, 2.6 GB RAM). Then extract it to the
 # microSD next to the zip first (a file is written in pieces), check it, write it from there and delete it.
-AVAIL=$(( $(sed -n 's/^MemAvailable: *\([0-9]*\) kB/\1/p' /proc/meminfo) * 1024 ))
+AVAIL_KB=$(sed -n 's/^MemAvailable: *\([0-9]*\) kB/\1/p' /proc/meminfo)
+# without pieces: the partition must be big enough before anything is written
+gt "$SYS_SIZE" "$(blockdev --getsize64 $SYS_DEV)" && abort "system_a is smaller than the new system (nothing was written)"
 if [ -n "$SYS_PARTS" ]; then
   # pieces of 512 MB, each fits in RAM: written straight from the zip, no microSD needed (adb sideload works too)
   : > $TMP/dd.log
@@ -198,14 +257,15 @@ if [ -n "$SYS_PARTS" ]; then
   while [ $i -lt "$SYS_PARTS" ]; do
     p=$(printf "%02d" $i)
     ui_print "  piece $((i + 1)) of $SYS_PARTS"
-    unzip -p "$ZIP" system.img.$p | dd of=$SYS_DEV bs=4194304 seek=$((i * SYS_PART_SIZE / 4194304)) conv=notrunc 2>>$TMP/dd.log
+    # the position in 4 MB blocks (128 per 512 MB piece): small numbers, right in any shell
+    unzip -p "$ZIP" system.img.$p | dd of=$SYS_DEV bs=4194304 seek=$((i * (SYS_PART_SIZE / 4194304))) conv=notrunc 2>>$TMP/dd.log
     i=$((i + 1))
   done
   sync
-elif [ "$AVAIL" -lt $((SYS_SIZE + 268435456)) ]; then
+elif gt "$(kb "$SYS_SIZE" 262144)" "$AVAIL_KB"; then
   XDIR="$(dirname "$ZIP")/.songateos_tmp"
-  FREE=$(( $(df -k "$(dirname "$ZIP")" | tail -1 | awk '{print $4}') * 1024 ))
-  [ "$FREE" -gt $((SYS_SIZE + 104857600)) ] || abort "not enough space on the microSD to unpack the update ($((SYS_SIZE >> 20)) MB needed)"
+  FREE_KB=$(df -k "$(dirname "$ZIP")" | tail -1 | awk '{print $4}')
+  gt "$FREE_KB" "$(kb "$SYS_SIZE" 102400)" || abort "not enough space on the microSD to unpack the update ($(kb "$SYS_SIZE") kB needed)"
   ui_print "  unpacking to the microSD first (the image is larger than the free memory)..."
   rm -rf "$XDIR"; mkdir -p "$XDIR" || abort "cannot write to the microSD"
   ( cd "$XDIR" && unzip -o "$ZIP" system.img >/dev/null 2>$TMP/unzip.log ) || { rm -rf "$XDIR"; abort "could not unpack the update to the microSD"; }
@@ -229,24 +289,23 @@ if [ "$GOT" != "$SYS_SHA" ]; then
 fi
 ui_print "  system_a OK"
 
-# boot logo: only replaces a SongateOS logo we know (never HiBy's stock logo or anything unknown)
-if [ -n "$FV_SHA" ]; then
-  HAVE_FV=$(sha256sum $FV_DEV | cut -d' ' -f1)
-  FV_SIZE=$(blockdev --getsize64 $FV_DEV)
-  if [ "$HAVE_FV" = "$FV_SHA" ]; then
-    ui_print "Boot logo already up to date"
-  elif echo ",$FV_FROM," | grep -q ",$HAVE_FV,"; then
-    unzip -p "$ZIP" imagefv.img > $TMP/imagefv.img
-    [ "$(stat -c %s $TMP/imagefv.img)" = "$FV_SIZE" ] || abort "logo image size does not match imagefv_a"
-    [ "$(sha256sum $TMP/imagefv.img | cut -d' ' -f1)" = "$FV_SHA" ] || abort "logo image checksum mismatch"
+# boot logo: written only when the patched copy was exactly the SongateOS logo (FV_ACTION=write, checked above)
+case "$FV_ACTION" in
+  same) ui_print "Boot logo already up to date" ;;
+  write)
     write_ok "$FV_DEV" || abort "internal: refusing to write $FV_DEV"
-    ui_print "Updating the boot logo (imagefv_a)..."
-    dd if=$TMP/imagefv.img of=$FV_DEV bs=1048576 2>/dev/null; sync
-    [ "$(sha256sum $FV_DEV | cut -d' ' -f1)" = "$FV_SHA" ] || ui_print "WARNING: logo check failed, restore imagefv_a from your backup"
-  else
-    ui_print "Boot logo left as it is (not a SongateOS logo we know)"
-  fi
-fi
+    ui_print "Writing the SongateOS boot logo (imagefv_a)..."
+    dd if=$TMP/imagefv.img of=$FV_DEV bs=1048576 2>>$TRACE; sync
+    if [ "$(sha256sum $FV_DEV | cut -d' ' -f1)" = "$FV_SHA" ]; then
+      ui_print "  boot logo OK"
+    else
+      ui_print "WARNING: boot logo check failed: restore imagefv_a from your backup (docs/01)"
+      trace "imagefv: read-back mismatch"
+    fi ;;
+  unknown) ui_print "Boot logo left as it is (not HiBy's stock logo or a SongateOS logo this zip knows)" ;;
+  bad) ui_print "Boot logo left as it is (the patched logo did not check out)" ;;
+esac
+rm -f $TMP/imagefv.img
 
 result ok "installed"
 ui_print "SongateOS $VERSION installed."

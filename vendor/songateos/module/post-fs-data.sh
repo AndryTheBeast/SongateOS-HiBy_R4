@@ -63,6 +63,13 @@ echo "$(date) post-fs-data: audio HAL sha256 now $(sha256sum $H | cut -c1-16)" >
 setprop persist.sys.overlay.devinputjack false
 echo "$(date) post-fs-data: devinputjack=$(getprop persist.sys.overlay.devinputjack)" >> $L
 
+# 2c) no phone: HiBy's vendor props say dual SIM (persist.radio.multisim.config=dsds) on a player with no modem.
+#     Android then makes two phones whose data-SIM switch fails ("radio not available") and is retried at once,
+#     forever: com.android.phone used 1.2 CPU cores and filled the log from boot (0.1.0-beta.8: battery drain,
+#     a warm player). Any other value means "unknown", and with the novoice overlay (no voice, SMS or mobile
+#     data) Android makes no phone at all, as on a Wi-Fi-only tablet. Before system_server and the phone app start.
+setprop persist.radio.multisim.config ssss
+
 # 3) media volume steps chosen in Settings (15/25/50/100), before system_server reads them. TrebleDroid's
 #    rw-system.sh (on post-fs, before this) already forces ro.config.media_vol_steps=25 with resetprop_phh, so a
 #    plain setprop fails ("Read-only property was already set"; SongateOS 0.1.0-beta.2): override it the same way.
