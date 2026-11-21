@@ -9,6 +9,7 @@ import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
@@ -138,7 +139,9 @@ public final class Updater {
         b.putString("notes", p.getString("notes", ""));
         b.putString("url", p.getString("html_url", ""));
         b.putLong("size", p.getLong("size", 0));
-        b.putLong("progress", DOWNLOADING.equals(st) ? sProgress : p.getLong("progress", 0));
+        // verifying / ready: the whole file is there (older Songates showed "0 MB of …" while it was checked)
+        b.putLong("progress", DOWNLOADING.equals(st) ? sProgress
+                : VERIFYING.equals(st) || READY.equals(st) ? p.getLong("size", 0) : p.getLong("progress", 0));
         b.putLong("last_check", p.getLong("last_check", 0));
         b.putBoolean("prerelease", p.getBoolean("prerelease", false));
         b.putBoolean("auto", auto(c));
@@ -260,10 +263,15 @@ public final class Updater {
                 return;
             }
             String same = p.getString("latest", "");
-            if (READY.equals(prev) && bestVer.equals(same)) { state(c, READY, null); return; }
             JSONObject zip = asset(best, "songateos-" + bestVer + "-R4.zip");
+            // a release re-published with the same version (2.1.0, 2026-11-21) is a different file: GitHub's checksum
+            // of the asset tells, so a download of the earlier zip is never installed for it
+            String digest = zip.optString("digest", "");
+            boolean sameFile = !digest.startsWith("sha256:") || digest.substring(7).equalsIgnoreCase(p.getString("sha256", ""));
+            if (READY.equals(prev) && bestVer.equals(same) && sameFile) { state(c, READY, null); return; }
+            // the whole release text (Songate shows it as its changelog); only a runaway body is cut
             String notes = best.optString("body", "");
-            if (notes.length() > 4000) notes = notes.substring(0, 4000) + "…";
+            if (notes.length() > 20000) notes = notes.substring(0, 20000) + "…";
             p.edit().putString("latest", bestVer)
                     .putString("tag", best.optString("tag_name"))
                     .putString("notes", notes)
@@ -597,7 +605,12 @@ public final class Updater {
     static String preflightBasics(Context c, boolean gapps) {
         BatteryManager bm = c.getSystemService(BatteryManager.class);
         int level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-        if (level < 40 && !bm.isCharging()) return "Charge to at least 40 % (or plug in the charger) first.";
+        // 40 %, or any charger plugged in (2.1.0 re-release: a slow USB charger counts too; Android's isCharging() stays
+        // false when the current is small, which refused the install at 30 % on a plugged-in player). Below 15 % never.
+        Intent bat = c.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        boolean plugged = bm.isCharging() || (bat != null && bat.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0);
+        if (level < 15) return "Charge to at least 15 % first, with the charger connected.";
+        if (level < 40 && !plugged) return "Charge to at least 40 %, or connect the charger, first.";
         if (!"R4".equals(sysprop("ro.product.vendor.device", "")) || !"R4".equals(sysprop("ro.product.vendor.model", ""))
                 || !"HiBy".equals(sysprop("ro.product.vendor.brand", "")) || !"trinket".equals(sysprop("ro.board.platform", "")))
             return "This is not a standard HiBy R4.";

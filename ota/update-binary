@@ -6,7 +6,7 @@
 #   - system_a   (logical partition in super; grown with lptools only if the new image is larger)
 #   - imagefv_a  (boot logo) only if the zip has a logo patch AND the R4 shows exactly HiBy's stock logo or a
 #                SongateOS logo the patch knows (sha256 before, and the patched result checked before writing)
-#   - /metadata/songateos/ota.result (small text file for the updater)
+#   - /metadata/songateos/ota.result and recovery.info (small text files for the updater)
 # Never: slot b, boot/dtbo/vbmeta, recovery, xbl, tz, rpm, hyp, abl, devcfg, keymaster, persist, modemst1/2,
 # fsg, devinfo, frp, privdata1/2, the GPT, or userdata (your apps, settings and Magisk stay as they are).
 #
@@ -50,6 +50,26 @@ result() {  # $1 status, $2 detail
   fi
   save_logs
   sync
+}
+
+# The recovery's record for the updater (2.1.0 re-release, 2026-11-21): the recovery's hook writes
+# /metadata/songateos/recovery.info at every recovery start, but Format Data wipes /metadata, so after a fresh install
+# Android saw no record and refused the first update ("Restart into recovery once"). The installer runs inside that
+# same recovery, so it writes the same record here, the way the hook does (name, hook version, slot, sha256 of the
+# recovery partition). Only when this recovery has the hook (its own /system/bin/runatboot.sh says HOOK_VERSION).
+record_recovery() {
+  hookv=$(grep -m1 '^HOOK_VERSION=' /system/bin/runatboot.sh 2>/dev/null | cut -d= -f2)
+  echo "$hookv" | grep -qE '^[0-9]+$' || { trace "recovery record: this recovery has no SongateOS hook, not written"; return; }
+  meta_mount || { trace "recovery record: /metadata not writable"; return; }
+  slot=$(getprop ro.boot.slot_suffix)
+  name=TWRP; { [ -n "$(getprop ro.build.fox_id)$(getprop ro.orangefox.version)" ] || [ -d /FFiles ]; } && name=OrangeFox
+  rsha=$(sha256sum /dev/block/bootdevice/by-name/recovery$slot 2>/dev/null | cut -d' ' -f1)
+  [ -n "$rsha" ] || { trace "recovery record: recovery$slot unreadable"; return; }
+  mkdir -p "$META_MNT/songateos"
+  { echo "name=$name"; echo "hook=$hookv"; echo "slot=$slot"; echo "sha256=$rsha"
+    echo "twrp=$(getprop ro.twrp.version)"; echo "time=$(date +%s)"; echo "source=installer"; } > "$META_MNT/songateos/recovery.info.tmp" && \
+    mv -f "$META_MNT/songateos/recovery.info.tmp" "$META_MNT/songateos/recovery.info" && \
+    trace "recovery record: $name hook $hookv slot $slot" || trace "recovery record: write failed"
 }
 
 # Keep this install's trace and the end of the recovery log (small text files): in /metadata/songateos for the
@@ -306,6 +326,8 @@ case "$FV_ACTION" in
   bad) ui_print "Boot logo left as it is (the patched logo did not check out)" ;;
 esac
 rm -f $TMP/imagefv.img
+
+record_recovery
 
 result ok "installed"
 ui_print "SongateOS $VERSION installed."

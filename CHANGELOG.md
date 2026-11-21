@@ -17,7 +17,7 @@
 
 ## 🔁 Coming from a SongateOS beta
 
-From this release SongateOS is signed with **its own keys**; the betas used Android's public test keys. So this once: install the zip in the recovery, then **Wipe › Format Data**, and set up Songate again (Bluetooth devices need pairing again). Your music on the microSD stays. Updates after this keep your data.
+From this release SongateOS is signed with **its own keys**; the betas used Android's public test keys. So this once, in the recovery: **Wipe › Format Data** first, then install the zip, and set up Songate again (Bluetooth devices need pairing again). Your music on the microSD stays. Updates after this keep your data.
 
 ## ⬆️ Updates from now on
 
@@ -55,6 +55,9 @@ From this release SongateOS is signed with **its own keys**; the betas used Andr
 - ⚡ The CPU governor stays on "schedutil" (HiBy's start-up put it on "performance" after every boot)
 - 🗑️ Phone apps, the camera, the Via browser, LineageOS Music and Recorder are gone for you: the R4 has no phone or camera
 - 📉 A network statistics log flood is gone
+- ⬆️ The first update after a fresh install no longer asks you to restart into the recovery first: the installer leaves the recovery's record for the updater
+- 🔋 Updates install with any charger connected, even a slow one (below 40 %); never below 15 %
+- 📝 The whole changelog reaches Songate (it was cut after 4,000 characters)
 
 ## ⚠️ Known limits
 

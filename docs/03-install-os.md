@@ -65,7 +65,8 @@ keys. Android refuses to start a system with new keys over data made by the old 
 over a beta needs **Format Data** once:
 
 1. Save what you need from internal storage (the microSD isn't touched).
-2. In the recovery: install the 2.1.0 zip, then **Wipe › Format Data**, type `yes`.
+2. In the recovery: **Wipe › Format Data**, type `yes`, **then** install the 2.1.0 zip (in this order: Format Data
+   also clears the record the installer leaves for the updater).
 3. Reboot › System and set up Songate again. Bluetooth devices need pairing again.
 
 `vbmeta_a` is already right if a beta ran. After this, updates keep your data again.
