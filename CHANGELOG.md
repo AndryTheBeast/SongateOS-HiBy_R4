@@ -32,6 +32,7 @@ From this release SongateOS is signed with **its own keys**; the betas used Andr
 - 🛡️ USB debugging asks first: a computer must be allowed on the player before it can connect
 - 🔕 No more "SongateOS is running" notification: the player's service runs as part of the system again
 - 🎵 Songate 2.1.0 inside, the version SongateOS now shares
+- 🔀 Installs on slot a or b: HiBy's own updates leave a player on either one, and SongateOS now stays on yours
 
 ## 🎚️ Sound
 
@@ -47,7 +48,8 @@ From this release SongateOS is signed with **its own keys**; the betas used Andr
 - 🎧 No more music starting by itself when Bluetooth earphones switch off while wired ones are plugged in
 - 💡 The status light follows your accent colour with the screen off
 - 👆 No phantom play or next presses when you pull a plug
-- 🧈 Smoother Settings, and the sleep timer fixed
+- 🧈 Smoother Settings, and the sleep timer fixed (it now fits an hour or more)
+- 🌫️ Automix's frosted cover has a clean edge
 
 ## 🧹 Under the hood
 
@@ -62,6 +64,7 @@ From this release SongateOS is signed with **its own keys**; the betas used Andr
 ## ⚠️ Known limits
 
 - 🔌 **USB speakers that charge the player:** after unplugging one, the R4 was seen once not to sleep until the next restart. USB DACs that don't charge it are fine
+- 🔀 **Slot b** is new and not yet tested on a player; on slot b use the recoveries of 2026.11.22 (below)
 - 📶 Bluetooth 5.0: no LE Audio. AAC was tested
 - 🗂️ Updates and Google apps need a microSD card (the recovery can't read the encrypted internal storage)
 - 📖 More in the README's [Known limits](README.md)
@@ -71,6 +74,6 @@ From this release SongateOS is signed with **its own keys**; the betas used Andr
 | File | What |
 |---|---|
 | `songateos-2.1.0-R4.zip` | 🎵 SongateOS 2.1.0: install from the recovery, or let the player update itself |
-| `OrangeFox-R12.0-Unofficial-R4.img` · `TWRP-3.7-Unofficial-R4.img` | 🛟 the recoveries, for the first install with fastboot |
-| `songateos-recovery-orangefox-2026.11.22.zip` · `songateos-recovery-twrp-2026.11.22.zip` | 🔁 the same recoveries as signed packages: flash from a recovery, or switch in Songate › Settings › Recovery |
+| `songateos-recovery-orangefox-2026.11.22.zip` · `songateos-recovery-twrp-2026.11.22.zip` | 🔁 the recoveries as signed packages: flash from a recovery, or switch in Songate › Settings › Recovery |
+| `OrangeFox-R12.0-Unofficial-R4.img` · `TWRP-3.7-Unofficial-R4.img` | 🛟 the same recoveries as images, for the first install with fastboot |
 | `SHA256SUMS.txt` | 🔍 check every file against it before you use it |
