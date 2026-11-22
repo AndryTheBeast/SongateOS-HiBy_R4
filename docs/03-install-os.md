@@ -8,9 +8,9 @@
 
 One zip from the recovery puts everything in place:
 
-- **The OS** (`system_a`): LineageOS 21 with Songate as the home screen and the HiBy R4 support built in: audio
+- **The OS** (`system_<slot>`, your slot from guide 1): LineageOS 21 with Songate as the home screen and the HiBy R4 support built in: audio
   paths and DAC settings, line out, status lights, Bluetooth audio, battery, hold switch.
-- **The SongateOS boot logo** (`imagefv_a`): the bootloader's first screen ("HIBY R4 · powered by Songate") and its
+- **The SongateOS boot logo** (`imagefv_<slot>`): the bootloader's first screen ("HIBY R4 · powered by Songate") and its
   low-battery, debug and overheating screens. The zip carries only SongateOS's own pictures as a patch, never HiBy's
   logo file. It is applied only if your R4 shows **exactly** HiBy's stock logo (or an earlier SongateOS logo): the
   installer checks the checksum before, patches a copy, checks the result, and only then writes it and reads it back.
@@ -18,7 +18,7 @@ One zip from the recovery puts everything in place:
   (`fastboot getvar secure` says `no`), as on the R4s tested.
 - **The boot animation and the charging animation**, inside the system image.
 
-Nothing else is written: not slot b, boot, vbmeta, the recovery or the bootloader chain. To go back, see the end of
+Nothing else is written: not the other slot, boot, vbmeta, the recovery or the bootloader chain. To go back, see the end of
 this guide.
 
 ## First install, coming from HiBy's firmware
@@ -27,14 +27,14 @@ You need OrangeFox or TWRP in the recovery (guide 2), your EDL backup (guide 1),
 card (checked against `SHA256SUMS.txt`), and [Android platform tools](https://developer.android.com/tools/releases/platform-tools)
 on the computer. Internal storage is erased in step 2: save anything on it first. Music on the microSD stays.
 
-1. **Turn Android's verification off in `vbmeta_a`.** HiBy's firmware has it on, and SongateOS can't start with it
-   on. The installer checks this first and stops with `vbmeta_a flags are 00000000, need 00000003` (nothing written)
-   if it's still on. Use the `vbmeta_a.bin` from **your own** backup. With the R4 in the recovery and connected by USB:
+1. **Turn Android's verification off in `vbmeta_<slot>`.** HiBy's firmware has it on, and SongateOS can't start with it
+   on. The installer checks this first and stops with `vbmeta_<slot> flags are 00000000, need 00000003` (nothing written)
+   if it's still on. Use the `vbmeta_<slot>.bin` from **your own** backup. With the R4 in the recovery and connected by USB:
    ```
    adb reboot fastboot
-   fastboot --disable-verity --disable-verification flash vbmeta_a D:\R4_backup\vbmeta_a.bin
+   fastboot --disable-verity --disable-verification flash vbmeta_<slot> D:\R4_backup\vbmeta_<slot>.bin
    ```
-   This changes one flag in `vbmeta_a` and nothing else. Then choose **Enter recovery** on the fastbootd screen.
+   This changes one flag in `vbmeta_<slot>` and nothing else. Then choose **Enter recovery** on the fastbootd screen.
    To undo it, flash the same file without the two `--disable` options.
 2. **Format Data.** In OrangeFox or TWRP: **Wipe › Format Data**, type `yes`. HiBy's Android encrypts its data
    partition, and SongateOS can't use another system's data: without this step it stops at "Cannot load Android
@@ -42,9 +42,10 @@ on the computer. Internal storage is erased in step 2: save anything on it first
    started once since.
 3. **Install the zip** from the microSD: OrangeFox › Files, or TWRP › Install. It checks the device, makes room in
    `super` (on R4s that installed a HiBy update, it removes HiBy's unused update leftovers there and first saves the old
-   partition table next to the zip as `super_table_before_songateos.bin`; keep that file), writes `system_a` and checks
+   partition table next to the zip as `super_table_before_songateos.bin`; keep that file), writes `system_<slot>` and checks
    it, then writes the boot logo (see above). It takes a few minutes. The log is next to the zip
-   (`songateos_install.log`).
+   (`songateos_install.log`). Near the start it shows the slot it writes, e.g. **`HiBy R4, slot b, vbmeta flags 3: OK`**: it must be the
+   slot you noted in guide 1. If it isn't, don't reboot: ask in the Discussions with the log.
 4. **Reboot › System.** You'll see the SongateOS logo, then the boot animation. The first start takes a few minutes,
    then Songate's setup appears.
 
@@ -69,7 +70,7 @@ over a beta needs **Format Data** once:
    also clears the record the installer leaves for the updater).
 3. Reboot › System and set up Songate again. Bluetooth devices need pairing again.
 
-`vbmeta_a` is already right if a beta ran. After this, updates keep your data again.
+`vbmeta_<slot>` is already right if a beta ran. After this, updates keep your data again.
 
 ## Updates need a microSD card
 
@@ -92,7 +93,7 @@ encrypted and the recovery can't read it. (Google apps, which also install throu
    ```
    adb sideload songateos-<version>-R4.zip
    ```
-   The installer checks that it's a standard R4 and the image's checksum before it writes, writes `system_a` (and the
+   The installer checks that it's a standard R4 and the image's checksum before it writes, writes `system_<slot>` (and the
    logo, only if it changed), and checks them afterwards. It takes a few minutes; `adb` may show 47% or similar at the
    end, that's normal.
 5. Reboot to system from the recovery. Your music, apps and settings stay.
@@ -103,6 +104,6 @@ The zips are built in 512 MB pieces, so they install without a card when sideloa
 
 - **To an earlier SongateOS version:** install its zip from the recovery. Going back to a beta from 2.1.0 needs
   Format Data (the keys differ, see above).
-- **HiBy's boot logo:** write `imagefv_a.bin` from your own backup ([guide 1](01-backup-edl.md#restore-one-partition),
+- **HiBy's boot logo:** write `imagefv_<slot>.bin` from your own backup ([guide 1](01-backup-edl.md#restore-one-partition),
   or [guide 4](04-branding.md)).
 - **HiBy's firmware:** [guide 7](07-back-to-stock.md), from your own backup.

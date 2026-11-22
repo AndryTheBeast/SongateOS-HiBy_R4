@@ -21,7 +21,8 @@ reason.
   brings your own player back, whatever happens.
 - **Only the HiBy R4 standard model.** Never the R4 EVA, and never another player.
 - **Never flash anything made for another device**, and never someone else's backup.
-- **Stay on slot a**, never relock the bootloader, and never write the partitions the guides tell you to leave alone.
+- **Stay on your slot** (a or b, see guide 1): never switch slots, never relock the bootloader, and never write the
+  partitions the guides tell you to leave alone.
 - **If something looks different from what a guide describes, stop.** Don't improvise. Ask in
   [Discussions](https://github.com/AndryTheBeast/SongateOS-HiBy_R4/discussions) and include what you saw.
 

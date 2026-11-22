@@ -72,5 +72,5 @@ From this release SongateOS is signed with **its own keys**; the betas used Andr
 |---|---|
 | `songateos-2.1.0-R4.zip` | 🎵 SongateOS 2.1.0: install from the recovery, or let the player update itself |
 | `OrangeFox-R12.0-Unofficial-R4.img` · `TWRP-3.7-Unofficial-R4.img` | 🛟 the recoveries, for the first install with fastboot |
-| `songateos-recovery-orangefox-2026.11.19.3.zip` · `songateos-recovery-twrp-2026.11.19.3.zip` | 🔁 the same recoveries as signed packages: flash from a recovery, or switch in Songate › Settings › Recovery |
+| `songateos-recovery-orangefox-2026.11.22.zip` · `songateos-recovery-twrp-2026.11.22.zip` | 🔁 the same recoveries as signed packages: flash from a recovery, or switch in Songate › Settings › Recovery |
 | `SHA256SUMS.txt` | 🔍 check every file against it before you use it |

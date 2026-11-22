@@ -3,8 +3,9 @@
 #   update-binary <api> <outfd> <zip>
 #
 # What it may write, and nothing else:
-#   - system_a   (logical partition in super; grown with lptools only if the new image is larger)
-#   - imagefv_a  (boot logo) only if the zip has a logo patch AND the R4 shows exactly HiBy's stock logo or a
+# The ACTIVE slot (a or b; 2.2, 2026-11-22: HiBy's own updates leave an R4 on either slot) - its:
+#   - system_<slot>   (logical partition in super; grown with lptools only if the new image is larger)
+#   - imagefv_<slot>  (boot logo) only if the zip has a logo patch AND the R4 shows exactly HiBy's stock logo or a
 #                SongateOS logo the patch knows (sha256 before, and the patched result checked before writing)
 #   - /metadata/songateos/ota.result and recovery.info (small text files for the updater)
 # Never: slot b, boot/dtbo/vbmeta, recovery, xbl, tz, rpm, hyp, abl, devcfg, keymaster, persist, modemst1/2,
@@ -14,9 +15,11 @@
 OUTFD=$2
 ZIP=$3
 TMP=/tmp/songateos_ota
-SYS_DEV=/dev/block/mapper/system_a
-FV_DEV=/dev/block/bootdevice/by-name/imagefv_a
-VBMETA_DEV=/dev/block/bootdevice/by-name/vbmeta_a
+# the slot the player runs on; every write goes to that slot's partitions (the other slot is never touched)
+SLOT=$(getprop ro.boot.slot_suffix)
+SYS_DEV=/dev/block/mapper/system$SLOT
+FV_DEV=/dev/block/bootdevice/by-name/imagefv$SLOT
+VBMETA_DEV=/dev/block/bootdevice/by-name/vbmeta$SLOT
 META_MNT=""; META_OWN=0; VEND_OWN=0
 
 TRACE=/tmp/songateos_install.log
@@ -141,7 +144,7 @@ tr '\000' ' ' < /proc/device-tree/compatible 2>/dev/null | grep -q "qcom,trinket
 case "$DTMODEL" in *EVA*|*eva*) abort "R4 EVA is not supported" ;; esac
 # HiBy's own vendor partition for the standard R4 must be in place (SongateOS runs on it)
 mkdir -p $TMP/vendor
-if mount -t ext4 -o ro /dev/block/mapper/vendor_a $TMP/vendor 2>/dev/null; then
+if mount -t ext4 -o ro /dev/block/mapper/vendor$SLOT $TMP/vendor 2>/dev/null; then
   VEND_OWN=1
   VFP=$(grep -h '^ro.vendor.build.fingerprint=' $TMP/vendor/build.prop 2>/dev/null | cut -d= -f2-)
   VMODEL=$(grep -h '^ro.product.vendor.model=' $TMP/vendor/build.prop 2>/dev/null | cut -d= -f2-)
@@ -151,16 +154,15 @@ else
 fi
 case "$VFP" in HiBy/R4/R4:*) ;; *) abort "vendor is not HiBy's R4 vendor ($VFP)" ;; esac
 [ "$VMODEL" = "R4" ] || abort "vendor model '$VMODEL' is not R4"
-# slot a only
-SLOT=$(getprop ro.boot.slot_suffix)
-[ "$SLOT" = "_a" ] || abort "active slot is '$SLOT', SongateOS installs on slot a only"
-# verified boot must already be off for slot a (vbmeta_a flags 3), otherwise the new system won't boot
+# the active slot, a or b (the device checks above ran on it)
+case "$SLOT" in _a|_b) ;; *) abort "unknown active slot '$SLOT'" ;; esac
+# verified boot must already be off for this slot (vbmeta flags 3), otherwise the new system won't boot
 VBF=$(dd if=$VBMETA_DEV bs=1 skip=120 count=4 2>/dev/null | od -An -tx1 | tr -d ' \n')
 VBM=$(dd if=$VBMETA_DEV bs=1 count=4 2>/dev/null)
-[ "$VBM" = "AVB0" ] || abort "vbmeta_a has no AVB header"
-case "$VBF" in 00000003) ;; *) abort "vbmeta_a flags are $VBF, need 00000003 (see docs/03-install-os.md)" ;; esac
-[ -b "$SYS_DEV" ] || abort "system_a is not mapped ($SYS_DEV)"
-ui_print "  HiBy R4, slot a, vbmeta flags 3: OK"
+[ "$VBM" = "AVB0" ] || abort "vbmeta$SLOT has no AVB header"
+case "$VBF" in 00000003) ;; *) abort "vbmeta$SLOT flags are $VBF, need 00000003 (see docs/03-install-os.md)" ;; esac
+[ -b "$SYS_DEV" ] || abort "system$SLOT is not mapped ($SYS_DEV)"
+ui_print "  HiBy R4, slot ${SLOT#_}, vbmeta flags 3: OK"
 
 # Sizes go past 2 GB: some recoveries' shells (OrangeFox's) do 32-bit arithmetic and get them wrong (0.1.0-beta.8
 # on OrangeFox: system_a wasn't grown and a piece's position went negative). All large-number work goes to awk.
@@ -181,7 +183,7 @@ if [ "$KIND" != "test" ]; then
   fi
   CUR=$(blockdev --getsize64 $SYS_DEV)
   if gt "$SYS_SIZE" "$CUR"; then
-    command -v lptools >/dev/null 2>&1 || abort "new system ($SYS_SIZE) is larger than system_a ($CUR) and this recovery has no lptools"
+    command -v lptools >/dev/null 2>&1 || abort "new system ($SYS_SIZE) is larger than system$SLOT ($CUR) and this recovery has no lptools"
     NEED_RESIZE=1
   fi
 fi
@@ -227,11 +229,11 @@ fi
 # ---------------- write ----------------
 umount /system_root 2>/dev/null; umount /system 2>/dev/null; umount /mnt/system 2>/dev/null
 # OrangeFox mounts system_a on /apex when HiBy's stock system is installed; that keeps system_a busy and it can't be
-# mapped again at its new size (first install from stock, 2026-11-19). Let go of every mount of system_a.
+# mapped again at its new size (first install from stock, 2026-11-19). Let go of every mount of the system partition.
 for m in $(grep -E "^($SYS_DEV|$(readlink -f $SYS_DEV)) " /proc/mounts | cut -d' ' -f2); do umount "$m" 2>/dev/null; done
 if [ "$NEED_RESIZE" = 1 ]; then
-  ui_print "Growing system_a to $SYS_SIZE bytes..."
-  if ! lptools resize system_a "$SYS_SIZE"; then
+  ui_print "Growing system$SLOT to $SYS_SIZE bytes..."
+  if ! lptools resize system$SLOT "$SYS_SIZE"; then
     # Coming from HiBy's firmware, super still holds its unused update leftovers (the "-cow" partitions, ~1.9 GB on
     # the R4; first install from stock 2026-11-19). They only matter while an Android update is being merged, and
     # recovery can't be in the middle of one, unless the update state says so: then stop and touch nothing.
@@ -241,7 +243,7 @@ if [ "$NEED_RESIZE" = 1 ]; then
       [ -e /dev/block/mapper/$p ] && COWS="$COWS $p" && continue
       lptools map $p >/dev/null 2>&1 && COWS="$COWS $p"
     done
-    [ -n "$COWS" ] || abort "lptools could not grow system_a (not enough free space in super)"
+    [ -n "$COWS" ] || abort "lptools could not grow system$SLOT (not enough free space in super)"
     # super's table (its first 1 MiB) next to the zip first, so the removal can be undone
     SUPER=/dev/block/by-name/super
     dd if=$SUPER of="$(dirname "$ZIP")/super_table_before_songateos.bin" bs=1048576 count=1 2>/dev/null       && trace "super table saved next to the zip"
@@ -250,26 +252,26 @@ if [ "$NEED_RESIZE" = 1 ]; then
       lptools unmap $p >/dev/null 2>&1
       r=$(lptools remove $p 2>&1 | tail -1); trace "remove $p: $r"
     done
-    lptools resize system_a "$SYS_SIZE" || abort "lptools could not grow system_a (not enough free space in super?)"
+    lptools resize system$SLOT "$SYS_SIZE" || abort "lptools could not grow system$SLOT (not enough free space in super?)"
   fi
   # the recovery mapped system_a at its start; resize only changes super's table, so map it again at the new size
   # (0.1.0-beta.4: the old mapping kept the old size and the install stopped here)
-  lptools unmap system_a >/dev/null 2>&1
-  lptools map system_a >/dev/null 2>&1
-  [ -b "$SYS_DEV" ] || lptools map system_a
+  lptools unmap system$SLOT >/dev/null 2>&1
+  lptools map system$SLOT >/dev/null 2>&1
+  [ -b "$SYS_DEV" ] || lptools map system$SLOT
   NEW=$(blockdev --getsize64 $SYS_DEV)
-  gt "$SYS_SIZE" "$NEW" && abort "system_a is still too small ($NEW)"
+  gt "$SYS_SIZE" "$NEW" && abort "system$SLOT is still too small ($NEW)"
 fi
 write_ok "$SYS_DEV" || abort "internal: refusing to write $SYS_DEV"
 blockdev --setrw $SYS_DEV 2>/dev/null
-ui_print "Writing system_a (this takes a few minutes)..."
-result writing "system_a"
+ui_print "Writing system$SLOT (this takes a few minutes)..."
+result writing "system$SLOT"
 # The recoveries' unzip (Android's ziptool) holds the whole entry in RAM when it writes to a pipe: an image larger
 # than the free RAM aborted with nothing written (0.1.0-beta.4, 2.97 GB image, 2.6 GB RAM). Then extract it to the
 # microSD next to the zip first (a file is written in pieces), check it, write it from there and delete it.
 AVAIL_KB=$(sed -n 's/^MemAvailable: *\([0-9]*\) kB/\1/p' /proc/meminfo)
 # without pieces: the partition must be big enough before anything is written
-gt "$SYS_SIZE" "$(blockdev --getsize64 $SYS_DEV)" && abort "system_a is smaller than the new system (nothing was written)"
+gt "$SYS_SIZE" "$(blockdev --getsize64 $SYS_DEV)" && abort "system$SLOT is smaller than the new system (nothing was written)"
 if [ -n "$SYS_PARTS" ]; then
   # pieces of 512 MB, each fits in RAM: written straight from the zip, no microSD needed (adb sideload works too)
   : > $TMP/dd.log
@@ -300,26 +302,26 @@ fi
 ui_print "Checking what was written..."
 GOT=$(head -c "$SYS_SIZE" $SYS_DEV | sha256sum | cut -d' ' -f1)
 if [ "$GOT" != "$SYS_SHA" ]; then
-  ui_print "ERROR: system_a does not match the update after writing."
+  ui_print "ERROR: system$SLOT does not match the update after writing."
   ui_print "dd: $(tail -n2 $TMP/dd.log)"
   ui_print "Install the zip again, or restore your system backup (docs/03-install-os.md)."
-  result fail "system_a verify failed"
+  result fail "system$SLOT verify failed"
   cleanup
   exit 1
 fi
-ui_print "  system_a OK"
+ui_print "  system$SLOT OK"
 
 # boot logo: written only when the patched copy was exactly the SongateOS logo (FV_ACTION=write, checked above)
 case "$FV_ACTION" in
   same) ui_print "Boot logo already up to date" ;;
   write)
     write_ok "$FV_DEV" || abort "internal: refusing to write $FV_DEV"
-    ui_print "Writing the SongateOS boot logo (imagefv_a)..."
+    ui_print "Writing the SongateOS boot logo (imagefv$SLOT)..."
     dd if=$TMP/imagefv.img of=$FV_DEV bs=1048576 2>>$TRACE; sync
     if [ "$(sha256sum $FV_DEV | cut -d' ' -f1)" = "$FV_SHA" ]; then
       ui_print "  boot logo OK"
     else
-      ui_print "WARNING: boot logo check failed: restore imagefv_a from your backup (docs/01)"
+      ui_print "WARNING: boot logo check failed: restore imagefv$SLOT from your backup (docs/01)"
       trace "imagefv: read-back mismatch"
     fi ;;
   unknown) ui_print "Boot logo left as it is (not HiBy's stock logo or a SongateOS logo this zip knows)" ;;

@@ -20,7 +20,8 @@
 #    and the SHA-256 in the request (checked here) is what lets it in; the HiBy R4 service checked the maker's own
 #    checksum before writing the request, and only root can write /metadata/songateos.
 # Nothing here writes to any partition except the small files in /metadata/songateos.
-HOOK_VERSION=5
+# hook 6 (2026-11-22): Google apps unmap the running slot's product/system_ext (slot b support)
+HOOK_VERSION=6
 # mksh's default TMPDIR is /data/local, which isn't mounted in the recovery
 export TMPDIR=/tmp
 LOG=/tmp/songateos_ota.log
@@ -186,13 +187,13 @@ if [ -n "$ZIP" ]; then
 fi
 
 # Hook 4: Google apps installers (NikGapps, MindTheGapps) write to /product and /system_ext as "dedicated partitions"
-# when HiBy's product_a / system_ext_a are mapped. SongateOS doesn't use them (its /product and /system_ext are
+# when HiBy's product / system_ext of the running slot are mapped. SongateOS doesn't use them (its /product and /system_ext are
 # inside system_a) and they're read-only, so the install failed half-way and left duplicate files (0.1.0-beta.4:
 # "Multiple modules installers" boot loop). Unmap them for this recovery session only (nothing is written; they come
 # back at the next boot), so the installers use the folders inside system_a.
 if [ -n "$GZIP" ]; then
   umount /product /system_ext 2>/dev/null
-  for p in product_a system_ext_a; do
+  for p in product$SLOT system_ext$SLOT; do   # the running slot (hook 6: either slot)
     [ -e /dev/block/mapper/$p ] && lptools unmap $p >/dev/null 2>&1 && log "unmapped $p for the Google apps install"
   done
 fi

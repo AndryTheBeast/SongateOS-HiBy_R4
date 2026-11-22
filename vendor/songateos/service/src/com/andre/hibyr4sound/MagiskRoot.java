@@ -28,10 +28,10 @@ import java.util.regex.Pattern;
  *  - Only Magisk's official GitHub releases (topjohnwu/Magisk, latest); the APK must be com.topjohnwu.magisk signed
  *    with topjohnwu's certificate (MAGISK_CERT). Checked here before anything is handed on.
  *  - The module's root helper (ota_bridge.sh) does the rest with Magisk's own tools from that APK: install = Magisk's
- *    boot_patch.sh on the current boot_a ("direct install"), boot_a written and read back, the Magisk app installed;
+ *    boot_patch.sh on the current boot partition of the running slot ("direct install"), written and read back, the Magisk app installed;
  *    removal = the exact stock boot image back (Magisk's backup, our copy, or Magisk's ramdisk restore).
  *  - A restart finishes either. SongateOS itself doesn't need Magisk.
- * "Keep root after updates": SongateOS updates don't replace boot_a, so Magisk stays; the option is kept for updates
+ * "Keep root after updates": SongateOS updates don't replace the boot partition, so Magisk stays; the option is kept for updates
  * that will (then the helper re-patches after the update).
  * API: root_get, root_check, root_install, root_remove; observer /system/root.
  */

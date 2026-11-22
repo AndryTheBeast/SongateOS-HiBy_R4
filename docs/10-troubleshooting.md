@@ -28,7 +28,7 @@
 ## Updates and Google apps
 
 - **"Updates need a microSD card":** put one in, or update from a computer ([guide 3](03-install-os.md#updates-need-a-microsd-card)).
-- **"vbmeta_a flags are 00000000, need 00000003":** Android's verification is still on (HiBy's firmware has it on).
+- **"vbmeta_a (or vbmeta_b) flags are 00000000, need 00000003":** Android's verification is still on (HiBy's firmware has it on).
   Nothing was written. Turn it off as in [guide 3, step 1](03-install-os.md#first-install-coming-from-hibys-firmware),
   then install again.
 - **"Cannot load Android system" or restarting over and over after the first install:** the data partition is still

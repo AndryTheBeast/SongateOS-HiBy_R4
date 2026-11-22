@@ -30,6 +30,6 @@ left alone.
 
 ## Going back to HiBy's logo
 
-Write `imagefv_a.bin` from your own EDL backup: from Android as root or from the recovery with `dd` (check the file's
+Write `imagefv_<slot>.bin` (your slot, guide 1) from your own EDL backup: from Android as root or from the recovery with `dd` (check the file's
 checksum against your backup's `SHA256SUMS.txt` first), or with EDL as in [guide 1](01-backup-edl.md#restore-one-partition).
 Note: SongateOS updates that carry a logo write SongateOS's again over HiBy's stock one.

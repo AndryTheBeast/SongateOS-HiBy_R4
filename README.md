@@ -17,7 +17,7 @@ https://github.com/user-attachments/assets/36116c37-46c9-4972-811c-af78d3524056
 > [!IMPORTANT]
 > **HiBy R4 standard model only** (Snapdragon 665, eMMC). **Never on the R4 EVA** or any other player.
 >
-> **Tests were only made on HiBy's firmware of August 2026.** An unlocked bootloader is needed.
+> **Tests were only made on HiBy's firmware of August 2026.** The R4 comes with its bootloader unlocked from the factory; nothing to unlock.
 >
 > **Make your own EDL backup first** ([guide 1](docs/01-backup-edl.md)): it is how you go back.
 
@@ -153,6 +153,7 @@ and anyone's personal backup.
 <summary><b>⚠️ Known limits</b></summary>
 
 - **Model:** the HiBy R4 standard model only. The R4 EVA uses different storage and was never tested.
+- **Slot a or b:** HiBy's own updates leave a player on either slot; SongateOS installs on the one your player runs on ([guide 1](docs/01-backup-edl.md) shows yours). Never switch slots. Slot b support is new in 2.1.0 and is being tested on a slot-b player; on slot b, use the recoveries of version 2026.11.22 or newer (in the 2.1.0 release).
 - **Firmware:** tests were only made on HiBy's firmware of August 2026.
 - **Updates need a microSD card:** the recovery can't read the encrypted internal storage. Without a card, update from a computer ([guide 3](docs/03-install-os.md#updates-need-a-microsd-card)).
 - **Bluetooth 5.0:** no LE Audio or LC3. AAC was tested; other codecs are still to be checked.

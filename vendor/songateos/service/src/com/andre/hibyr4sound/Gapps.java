@@ -249,6 +249,11 @@ final class Gapps {
         }
     }
 
+    /** Whether updates will add the kept Google apps (cheap: no checksum; keptRequestLines() does the full check). */
+    static boolean keptWanted(Context c) {
+        return !prefs(c).getBoolean("keep_once_off", false) && keep(c) && present(c);
+    }
+
     /** The kept Google apps zip for an update request ("" when there's none to keep). */
     static String keptRequestLines(Context c) {
         SharedPreferences p = prefs(c);

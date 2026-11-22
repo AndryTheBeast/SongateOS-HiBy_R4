@@ -6,7 +6,7 @@ Android doesn't start. Both work on the R4 and are built from this repository's
 
 > **Standard HiBy R4 only.** Never flash a recovery built for the R4 EVA or any other device.
 >
-> **Do [guide 1](01-backup-edl.md) first.** Your EDL backup holds your stock recovery (`recovery_a.bin`), which is how
+> **Do [guide 1](01-backup-edl.md) first.** Your EDL backup holds your stock recovery (`recovery_<slot>.bin`), which is how
 > you undo this.
 
 **Downloads:** the recovery images are on the [Releases](https://github.com/AndryTheBeast/SongateOS-HiBy_R4/releases)
@@ -30,9 +30,11 @@ fastboot getvar current-slot
 fastboot reboot
 ```
 
-- `unlocked: yes` is required. If it says `no`, stop here: this guide hasn't been tried on a locked R4.
-- `current-slot: a` is expected. **Stay on slot a.** On many units slot b has no system in the dynamic partitions;
-  switching to it (`fastboot set_active b`) leaves the player unable to start.
+- `unlocked: yes` is expected: HiBy ships the R4 with its bootloader unlocked, so there's nothing to unlock and
+  nothing gets wiped. If it says `no`, stop here and ask in the Discussions: that isn't a stock R4.
+- `current-slot` is **your slot**, `a` or `b`; it must match the one you noted in guide 1. **Never switch slots**
+  (`fastboot set_active`): after HiBy's updates the other slot's system is gone or outdated, and the player wouldn't
+  start.
 - Never run `fastboot flashing lock` or `fastboot oem lock`: locking with modified images can leave the player
   unbootable.
 
@@ -52,7 +54,7 @@ built into the recovery:
 
 ```
 adb reboot fastboot
-fastboot flash recovery_a <recovery>.img
+fastboot flash recovery_<slot> <recovery>.img
 fastboot reboot recovery
 ```
 
@@ -94,13 +96,13 @@ They then show each step and read the partitions back.
 **From SongateOS, without a recovery menu:** Songate › Settings › Recovery lists TWRP and OrangeFox and switches to the
 one you pick, with the same checks (it also checks the package's SongateOS signature).
 
-**Both zips write `recovery_a` and `recovery_b`, on purpose.** The player runs on slot a, and that doesn't change: the
-zips never switch the active slot. But with the custom recovery in both slots, a player that ends up on slot b by
-mistake can still start the recovery and go back with **Reboot › Slot A**. With HiBy's stock recovery in
-`recovery_b`, that way back needs a PC or EDL.
+**Both zips write `recovery_a` and `recovery_b`, on purpose.** The player stays on its slot: the zips never switch
+the active slot. But with the custom recovery in both slots, a player that ends up on the other slot by mistake can
+still start the recovery and go back with **Reboot › Slot A** (or **Slot B**). With HiBy's stock recovery in the
+other slot, that way back needs a PC or EDL.
 
-(The first install with the `.img` above writes only `recovery_a`. Flash a zip once afterwards if you want
-`recovery_b` covered too.)
+(The first install with the `.img` above writes only `recovery_<slot>`. Flash a zip once afterwards if you want
+the other slot covered too.)
 
 ## What works
 
@@ -120,12 +122,12 @@ From Android or the custom recovery:
 ```
 adb reboot fastboot
 fastboot flash recovery_a D:\R4_backup\recovery_a.bin
-fastboot flash recovery_b D:\R4_backup\recovery_b.bin      (only if a zip wrote recovery_b)
+fastboot flash recovery_b D:\R4_backup\recovery_b.bin      (both, if a zip wrote both; else only recovery_<slot>)
 fastboot reboot
 ```
 
 Check the file first (`sha256sum -c SHA256SUMS.txt` in your backup folder). If the player doesn't start at all, write
-`recovery_a` with EDL instead ([guide 1, "Restore one partition"](01-backup-edl.md#restore-one-partition)).
+`recovery_<slot>` with EDL instead ([guide 1, "Restore one partition"](01-backup-edl.md#restore-one-partition)).
 
 ## Next
 

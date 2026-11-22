@@ -7,7 +7,7 @@ Custom recovery for the **HiBy R4** digital audio player: **standard model only*
 
 One device tree builds both recoveries; pick the one you like:
 - **TWRP** 3.7 (twrp-12.1)
-- **OrangeFox** R11 (fox_12.1); its extra options are in `orangefox.mk`
+- **OrangeFox** R12 (fox_12.1); its extra options are in `orangefox.mk`
 
 ## What works
 
@@ -30,19 +30,20 @@ can't wipe or restore them.
 - On the R4, HiBy's bootloader fastboot rejects `fastboot boot` and `fastboot flash`. Flashing works from
   **fastbootd** (`adb reboot fastboot`) or from a running custom recovery.
 - **Back up your own stock recovery first** (from fastbootd you can't read partitions; use a root shell,
-  `dd if=/dev/block/by-name/recovery_a of=/sdcard/stock_recovery_a.img`, or a full EDL backup). Never use
-  someone else's backup on your unit.
-- Use slot **a**. On many units slot b has no system in the dynamic partitions; never switch to it.
+  `dd if=/dev/block/by-name/recovery$(getprop ro.boot.slot_suffix) of=/sdcard/stock_recovery.img`, or a full EDL
+  backup). Never use someone else's backup on your unit.
+- Stay on **your slot**, `a` or `b` (`fastboot getvar current-slot`). HiBy's own updates leave a player on either one,
+  and the other slot's system is then gone or outdated: never switch slots.
 
 ## Install
 
 ```
 adb reboot fastboot
-fastboot flash recovery_a <recovery image>.img
+fastboot flash recovery_<slot> <recovery image>.img
 fastboot reboot recovery
 ```
 
-Undo: flash your own stock recovery back the same way (`fastboot flash recovery_a stock_recovery_a.img`).
+Undo: flash your own stock recovery back the same way (`fastboot flash recovery_<slot> stock_recovery.img`).
 
 ## Installer zip (TWRP)
 
@@ -78,7 +79,8 @@ Output: `out/target/product/R4/recovery.img` (OrangeFox also makes an `OrangeFox
   checksums in `prebuilt/SOURCES.sha256`). HiBy hasn't published the kernel source.
 - The recovery partition is 96 MB, so both recoveries fit with room to spare.
 - Virtual A/B with separate `recovery_a`/`recovery_b` partitions. The tree contains no boot control HAL on purpose,
-  so the recovery can't switch slots.
+  so the recovery can't switch slots. Everything slot-dependent (the SongateOS update hook, Google apps installs,
+  OrangeFox's Magisk add-on) uses the slot the player started on (`ro.boot.slot_suffix`).
 
 ## License
 

@@ -3,11 +3,14 @@
 [Magisk](https://github.com/topjohnwu/Magisk) gives root by patching the player's **boot image**. Nothing else on the
 player changes, and undoing it is one command.
 
+**On SongateOS** the easy way is **Songate › Settings › Root**: it does all of this for you, on your slot. This guide
+is the manual way, and the one for HiBy's firmware.
+
 > **Tested so far:** root with Magisk on `boot_a` works on this project's own R4, running LineageOS (the base of
 > SongateOS). On HiBy's stock firmware, an R4 owner in the [XDA thread](https://xdaforums.com/t/4746303/) reports the
 > same method working (firmware 1.70); this project hasn't tried it there itself. The steps are the same either way.
 >
-> **Do [guide 1](01-backup-edl.md) first.** Your `boot_a.bin` is both what you patch and how you undo it.
+> **Do [guide 1](01-backup-edl.md) first.** Your `boot_<slot>.bin` (your slot, guide 1) is both what you patch and how you undo it.
 
 ## What you need
 
@@ -19,7 +22,7 @@ player changes, and undoing it is one command.
 ## 1. Check the boot image matches
 
 The boot image you patch must be the one that's on the player now. Check it against your backup's checksum
-(`sha256sum -c SHA256SUMS.txt`: `boot_a.bin: OK`). If you've updated HiBy's firmware since the backup, make a new
+(`sha256sum -c SHA256SUMS.txt`: `boot_<slot>.bin: OK`). If you've updated HiBy's firmware since the backup, make a new
 backup first.
 
 ## 2. Patch it on the R4
@@ -27,9 +30,9 @@ backup first.
 1. Install the Magisk app on the R4 (`adb install Magisk-vXX.apk`).
 2. Copy your boot image to the player:
    ```
-   adb push D:\R4_backup\boot_a.bin /sdcard/Download/boot_a.img
+   adb push D:\R4_backup\boot_<slot>.bin /sdcard/Download/boot.img
    ```
-3. In Magisk: **Install** › **Select and Patch a File** › pick `boot_a.img`. Leave the options as they are.
+3. In Magisk: **Install** › **Select and Patch a File** › pick `boot.img`. Leave the options as they are.
 4. Copy the result back to the PC (the name ends in random letters):
    ```
    adb shell ls /sdcard/Download/magisk_patched*
@@ -40,17 +43,21 @@ backup first.
 
 ```
 adb reboot fastboot
-fastboot flash boot_a magisk_patched-XXXXX.img
+fastboot flash boot_<slot> magisk_patched-XXXXX.img
 fastboot reboot
 ```
 
-- Use **`boot_a`**, not `boot` or `boot_b`. Slot b isn't used on the R4.
+- Use **`boot_<slot>`** (your slot), not plain `boot` and not the other slot.
+- **OrangeFox's Magisk add-on** (its built-in installer) works too, instead of steps 2 and 3: it patches the boot
+  partition of the slot the player started on by itself, so there's nothing to choose. Check the checksum of step 1
+  first all the same.
 - After the restart, open Magisk: it shows the installed version, and apps can ask for root.
 
 ## Updates
 
 - **HiBy firmware updates** replace the boot image and remove root. After an update: make a new backup (or at least
-  a new copy of `boot_a`), then patch and flash again.
+  a new copy of `boot_<slot>`), then patch and flash again.
+- **SongateOS updates** don't touch the boot image, so root stays.
 - **Magisk updates** go through the Magisk app as usual.
 
 ## Undo: remove root
@@ -59,12 +66,12 @@ Flash your own unpatched boot image back:
 
 ```
 adb reboot fastboot
-fastboot flash boot_a D:\R4_backup\boot_a.bin
+fastboot flash boot_<slot> D:\R4_backup\boot_<slot>.bin
 fastboot reboot
 ```
 
 Or in the Magisk app: **Uninstall Magisk** › **Complete Uninstall**.
 
 If the player doesn't start after flashing the patched image, it usually still reaches fastbootd or the recovery
-(`adb reboot fastboot` from the recovery). If nothing starts, write `boot_a` back with EDL
+(`adb reboot fastboot` from the recovery). If nothing starts, write `boot_<slot>` back with EDL
 ([guide 1, "Restore one partition"](01-backup-edl.md#restore-one-partition)).

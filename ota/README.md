@@ -1,6 +1,6 @@
 # SongateOS updates (OTA)
 
-SongateOS updates itself from this repository's GitHub releases: Settings › System › **SongateOS update** finds a
+SongateOS updates itself from this repository's GitHub releases: **Songate › Settings › Updates** finds a
 new release, downloads it to the microSD card, checks it, and on your **Install** restarts into the recovery, which
 installs it and restarts back into SongateOS. Your music, apps, settings and root stay.
 
@@ -15,7 +15,7 @@ installs it and restarts back into SongateOS. Your music, apps, settings and roo
  verify  SHA256SUMS.txt + signature
          (release certificate)
  checks  battery, standard R4, HiBy vendor,
-         slot a, our recovery with the hook
+         slot a or b, our recovery with the hook
  install ota.cmd ──────────────────────────▶  ota_bridge.sh copies it to
                                               /metadata/songateos/ota.cmd
          reboot("recovery") ──────────────────────────────────────────────▶  runatboot.sh: reads + deletes ota.cmd,
@@ -24,7 +24,7 @@ installs it and restarts back into SongateOS. Your music, apps, settings and roo
                                                                              OpenRecoveryScript: install (signature
                                                                              checked) and reboot
                                                                              update-binary: device checks, writes
-                                                                             system_a (+ logo), verifies, writes
+                                                                             system_<slot> (+ logo), verifies, writes
                                                                              /metadata/songateos/ota.result
  notification "installed" / "failed"  ◀──────  ota_bridge.sh publishes ota.result
 ```
@@ -51,19 +51,23 @@ installs it and restarts back into SongateOS. Your music, apps, settings and roo
 
 - the recovery is ours for the R4, the device tree model is the **standard HiBy R4** (the R4 EVA and other models
   stop here), the SoC is SM6125, and the vendor partition is HiBy's R4 vendor;
-- the active slot is **a**, and `vbmeta_a` has verification off (flags 3);
-- the image fits in `system_a`, or `lptools` can grow it inside `super`.
+- the active slot (`ro.boot.slot_suffix`) is `a` or `b`, and that slot's `vbmeta` has verification off (flags 3);
+- the image fits in that slot's `system`, or `lptools` can grow it inside `super`.
+
+Everything below is on the slot the player started on, written `<slot>`. The installer never switches slots.
 
 Then it writes only:
 
-- `system_a`, and reads it back against the zip's SHA-256;
-- `imagefv_a` (boot logo), only if the zip has one **and** the R4 already shows a SongateOS logo listed in the zip.
-  It never replaces HiBy's stock logo or anything it doesn't know.
-- `/metadata/songateos/ota.result`.
+- `system_<slot>`, and reads it back against the zip's SHA-256;
+- `imagefv_<slot>` (boot logo), only if the zip has one **and** the logo there is exactly HiBy's stock one or a
+  SongateOS logo listed in the zip (`imagefv_from`). It's a patch (`imagefv.patch`), checked against the expected
+  SHA-256 before it's written and read back after. Any other logo is left alone.
+- `/metadata/songateos/ota.result` and `recovery.info` (which recovery ran the install, so Android knows it after a
+  Format Data).
 
-It never writes slot b, boot, dtbo, vbmeta, recovery, xbl, tz, rpm, hyp, abl, devcfg, keymaster, persist,
-modemst1/2, fsg, devinfo, frp, privdata1/2, the GPT, or userdata. Magisk lives in `boot_a`, which isn't touched, so
-root stays.
+It never writes the other slot, boot, dtbo, vbmeta, recovery, xbl, tz, rpm, hyp, abl, devcfg, keymaster, persist,
+modemst1/2, fsg, devinfo, frp, privdata1/2, the GPT, or userdata. Magisk lives in `boot_<slot>`, which isn't touched,
+so root stays.
 
 A zip built with `--test` runs every check and writes nothing. Use it to try the whole chain safely.
 
@@ -85,8 +89,11 @@ Upload `songateos-1.0.0-R4.zip` and `SHA256SUMS.txt` to a GitHub release tagged 
 
 ## Requirements on the R4
 
-- A SongateOS recovery with **hook v2** in `recovery_a`: TWRP v4.3+ or OrangeFox (OTA build `ota4`+).
-- After flashing the recovery, tap Settings › System › SongateOS update › Recovery › **Check it** once. The R4
+- A SongateOS recovery with the update hook in `recovery_<slot>`: hook 2+ for updates, 3+ for Google apps, and
+  **6+ on slot b** (hook 6 is the first that finds Google apps' folders on slot b). The recoveries of version
+  2026.11.22 (TWRP v4.8, OrangeFox `ota11`, in the SongateOS 2.1.0 release) have hook 6.
+- At least 15 % battery with the charger connected, or 40 % without.
+- After flashing the recovery, tap Songate › Settings › Updates › Recovery › **Check it** once. The R4
   restarts into the recovery, which records itself, then comes straight back.
 - A microSD card with room for the update.
 - The repository must be public: the updater uses GitHub's API without a token. For tests, the updater can point at
@@ -98,7 +105,7 @@ Upload `songateos-1.0.0-R4.zip` and `SHA256SUMS.txt` to a GitHub release tagged 
 |---|---|
 | Check / Download / Install from Settings, through a public test repository | passed |
 | Signature check in the recovery (SongateOS key only; the AOSP test key is refused) | passed |
-| All installer checks (model, SoC, vendor, slot a, vbmeta flags) | passed |
+| All installer checks (model, SoC, vendor, slot a, vbmeta flags) | passed (slot b: not yet tested on a player) |
 | Restart back to Android and the "installed / test ran" notification | passed |
 | Wrong checksum: refused before install, notification "update failed", no retry loop | passed |
 | "Check it" recovery visit | passed |
@@ -135,4 +142,4 @@ make_recovery_package.sh --kind orangefox --img <OrangeFox recovery.img> --versi
 - Contents: `recovery.img`, its `sha256`, and `recovery.prop` (kind, name, title, version, update-hook version).
 - The same zip can be flashed by hand from TWRP or OrangeFox (`recovery-update-binary`). It checks it's a standard R4
   and that the image is intact, writes `recovery_a` and `recovery_b`, and reads them back.
-- `--hook`: the SongateOS update hook version inside that recovery (`runatboot.sh` `HOOK_VERSION`, 2 today).
+- `--hook`: the SongateOS update hook version inside that recovery (`runatboot.sh` `HOOK_VERSION`, 6 today).

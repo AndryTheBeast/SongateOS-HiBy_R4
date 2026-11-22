@@ -2,7 +2,7 @@
 # SongateOS updates: root side of the updater (HiBy R4 service, com.andre.hibyr4sound.Updater).
 # The service app (system uid) can't write /metadata or read the recovery partition, so:
 #   at boot  - make /metadata/songateos (root, 0700); publish
-#              sys.hibyr4.ota_recovery = ok:<name>:hook<N>  when recovery_a is the recovery that last wrote
+#              sys.hibyr4.ota_recovery = ok:<name>:hook<N>  when recovery_<slot> is the recovery that last wrote
 #                                                           /metadata/songateos/recovery.info (same sha256)
 #                                        none | changed:<name> otherwise
 #              sys.hibyr4.ota_result   = status|version|detail  from /metadata/songateos/ota.result (if any)
@@ -27,6 +27,8 @@
 LOG=/data/local/tmp/hiby_r4_fix.log
 D=/metadata/songateos
 APPCMD=/data/user_de/0/com.andre.hibyr4.service/files/ota.cmd
+# the slot the player runs on (2.2: an R4 may run on slot a or b after HiBy's own updates); its recovery and boot
+SLOT=$(getprop ro.boot.slot_suffix)
 log() { echo "$(date) ota: $*" >> $LOG; }
 
 recovery_check() {
@@ -34,7 +36,7 @@ recovery_check() {
   if [ ! -f $info ]; then setprop sys.hibyr4.ota_recovery none; return; fi
   name=$(grep '^name=' $info | cut -d= -f2); hook=$(grep '^hook=' $info | cut -d= -f2)
   want=$(grep '^sha256=' $info | cut -d= -f2)
-  have=$(sha256sum /dev/block/by-name/recovery_a 2>/dev/null | cut -d' ' -f1)
+  have=$(sha256sum /dev/block/by-name/recovery$SLOT 2>/dev/null | cut -d' ' -f1)
   if [ -n "$want" ] && [ "$want" = "$have" ]; then
     setprop sys.hibyr4.ota_recovery "ok:$name:hook$hook"
   else
@@ -121,7 +123,7 @@ rec_switch() {  # $1 nonce
     [ "$(sha256sum /dev/block/by-name/$p | cut -d' ' -f1)" = "$sha" ] || { fail "$1" "$p did not read back the same"; return; }
   done
   mkdir -p $D; chmod 0700 $D
-  { echo "name=$name"; echo "hook=$hook"; echo "slot=_a"; echo "sha256=$sha"; echo "twrp="
+  { echo "name=$name"; echo "hook=$hook"; echo "slot=$SLOT"; echo "sha256=$sha"; echo "twrp="
     echo "time=$(date +%s)"; echo "source=switch $kind $ver"; } > $D/recovery.info.tmp
   mv -f $D/recovery.info.tmp $D/recovery.info; sync
   rm -f $img $cmd
@@ -133,7 +135,7 @@ rec_switch() {  # $1 nonce
 # ---- Magisk (root) install / removal for the HiBy R4 service (requests magisk:<n>, magisk_remove:<n>) ----
 # The service has checked the APK's signing certificate (topjohnwu's official one) and left magisk.apk + mag.cmd
 # (sha256, version, mode) in its device-protected files. Install = Magisk's own boot_patch.sh, run with the binaries
-# from that APK, on the current boot_a (like the Magisk app's "direct install"), then boot_a is written and read back
+# from that APK, on the current boot_<slot> (like the Magisk app's "direct install"), then that boot partition is written and read back
 # and the Magisk app installed. Removal = Magisk's exact stock-boot backup when it has one, else its ramdisk
 # restore; mode=dry only builds the result and reports its sha256 (nothing written).
 MAG_TMP=/data/local/tmp/songateos_magisk
@@ -164,13 +166,13 @@ mag_read_cmd() {  # sets mver, msha, mmode
   [ $bad = 0 ]
 }
 
-mag_write_boot() {  # $1 image; writes boot_a and reads it back
+mag_write_boot() {  # $1 image; writes boot_<slot> and reads it back
   local img=$1 isz psz
   [ "$(head -c 8 $img)" = "ANDROID!" ] || return 1
-  isz=$(stat -c %s $img); psz=$(blockdev --getsize64 /dev/block/by-name/boot_a)
+  isz=$(stat -c %s $img); psz=$(blockdev --getsize64 /dev/block/by-name/boot$SLOT)
   [ "$isz" -le "$psz" ] || return 1
-  dd if=$img of=/dev/block/by-name/boot_a bs=1048576 2>/dev/null; sync
-  [ "$(head -c $isz /dev/block/by-name/boot_a | sha256sum | cut -d' ' -f1)" = "$(sha256sum $img | cut -d' ' -f1)" ]
+  dd if=$img of=/dev/block/by-name/boot$SLOT bs=1048576 2>/dev/null; sync
+  [ "$(head -c $isz /dev/block/by-name/boot$SLOT | sha256sum | cut -d' ' -f1)" = "$(sha256sum $img | cut -d' ' -f1)" ]
 }
 
 magisk_install() {  # $1 nonce
@@ -178,7 +180,7 @@ magisk_install() {  # $1 nonce
   mag_read_cmd && [ "$mmode" = install ] || { mag_fail "$1" "bad request"; return; }
   [ -f $apk ] && [ "$(sha256sum $apk | cut -d' ' -f1)" = "$msha" ] || { mag_fail "$1" "APK checksum mismatch"; return; }
   mag_tools $apk || { mag_fail "$1" "not a Magisk APK"; return; }
-  dd if=/dev/block/by-name/boot_a of=$MAG_TMP/boot.img bs=1048576 2>/dev/null
+  dd if=/dev/block/by-name/boot$SLOT of=$MAG_TMP/boot.img bs=1048576 2>/dev/null
   # stock boot (not patched yet): keep our own copy for removal, next to Magisk's
   ./magiskboot unpack boot.img >/dev/null 2>&1; ./magiskboot cpio ramdisk.cpio test >/dev/null 2>&1; st=$?
   rm -f kernel kernel_dtb ramdisk.cpio dtb extra recovery_dtbo second
@@ -190,12 +192,12 @@ magisk_install() {  # $1 nonce
   KEEPVERITY=true KEEPFORCEENCRYPT=true PATCHVBMETAFLAG=false RECOVERYMODE=false ASH_STANDALONE=1 \
     ./busybox sh boot_patch.sh boot.img >> $LOG 2>&1
   [ -f new-boot.img ] || { mag_fail "$1" "patching failed"; return; }
-  mag_write_boot $MAG_TMP/new-boot.img || { mag_fail "$1" "boot_a did not read back the same"; return; }
+  mag_write_boot $MAG_TMP/new-boot.img || { mag_fail "$1" "boot$SLOT did not read back the same"; return; }
   cp -f $apk /data/local/tmp/songateos_magisk.apk && chmod 0644 /data/local/tmp/songateos_magisk.apk
   pm install -r /data/local/tmp/songateos_magisk.apk >/dev/null 2>&1; rm -f /data/local/tmp/songateos_magisk.apk
   cd /; rm -rf $MAG_TMP; rm -f $apk $REC_DIR/mag.cmd
   setprop sys.hibyr4.ota_state "mag_done:$1"
-  log "magisk: $mver patched into boot_a (restart to finish)"
+  log "magisk: $mver patched into boot$SLOT (restart to finish)"
 }
 
 magisk_remove() {  # $1 nonce
@@ -203,10 +205,10 @@ magisk_remove() {  # $1 nonce
   mag_read_cmd && { [ "$mmode" = remove ] || [ "$mmode" = dry ]; } || { mag_fail "$1" "bad request"; return; }
   rm -rf $MAG_TMP; mkdir -p $MAG_TMP; chmod 0700 $MAG_TMP; cd $MAG_TMP
   cp -f /data/adb/magisk/magiskboot . 2>/dev/null || { mag_fail "$1" "Magisk isn't installed"; return; }
-  dd if=/dev/block/by-name/boot_a of=boot.img bs=1048576 2>/dev/null
+  dd if=/dev/block/by-name/boot$SLOT of=boot.img bs=1048576 2>/dev/null
   ./magiskboot unpack boot.img >/dev/null 2>&1
   ./magiskboot cpio ramdisk.cpio test >/dev/null 2>&1; st=$?
-  [ $(( st & 3 )) -eq 1 ] || { mag_fail "$1" "boot_a is not patched by Magisk"; return; }
+  [ $(( st & 3 )) -eq 1 ] || { mag_fail "$1" "boot$SLOT is not patched by Magisk"; return; }
   ./magiskboot cpio ramdisk.cpio "extract .backup/.magisk config" >/dev/null 2>&1
   sha1=$(grep '^SHA1=' config 2>/dev/null | cut -d= -f2)
   out=""
@@ -231,7 +233,7 @@ magisk_remove() {  # $1 nonce
     log "magisk: removal dry run, stock boot would be $rsha"
     return
   fi
-  mag_write_boot $out || { mag_fail "$1" "boot_a did not read back the same"; return; }
+  mag_write_boot $out || { mag_fail "$1" "boot$SLOT did not read back the same"; return; }
   pm uninstall com.topjohnwu.magisk >/dev/null 2>&1
   cd /; rm -rf $MAG_TMP; rm -f $REC_DIR/mag.cmd
   setprop sys.hibyr4.ota_state "mag_removed:$1"

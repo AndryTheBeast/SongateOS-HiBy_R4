@@ -16,8 +16,8 @@ The player still starts. Put the original back from fastbootd:
 
 ```
 adb reboot fastboot
-fastboot flash recovery_a D:\R4_backup\recovery_a.bin      (if you installed TWRP or OrangeFox)
-fastboot flash boot_a D:\R4_backup\boot_a.bin              (if you rooted with Magisk)
+fastboot flash recovery_<slot> D:\R4_backup\recovery_<slot>.bin      (if you installed TWRP or OrangeFox)
+fastboot flash boot_<slot> D:\R4_backup\boot_<slot>.bin              (if you rooted with Magisk)
 fastboot reboot
 ```
 
@@ -36,11 +36,11 @@ back is done with EDL, because the backup holds `super` as one 6 GB image.
    **Wipe › Format Data**, type `yes`. HiBy's firmware can't read data left by another system, and it's easier to clear
    it now than after the restore.
 3. **Make a folder with only these files**, copied (not moved) from your backup:
-   - `boot_a.bin`
-   - `dtbo_a.bin`
-   - `vbmeta_a.bin`
-   - `vbmeta_system_a.bin`
-   - `recovery_a.bin`
+   - `boot_<slot>.bin`
+   - `dtbo_<slot>.bin`
+   - `vbmeta_<slot>.bin`
+   - `vbmeta_system_<slot>.bin`
+   - `recovery_<slot>.bin`
    - `super.bin`
    - `imagefv.bin` (only if you changed the boot logo)
 
@@ -64,7 +64,7 @@ back is done with EDL, because the backup holds `super` as one 6 GB image.
 
 ## If something goes wrong
 
-- **The player shows nothing and doesn't start:** EDL still works. Enter it and write `boot_a` and `vbmeta_a` from
+- **The player shows nothing and doesn't start:** EDL still works. Enter it and write `boot_<slot>` and `vbmeta_<slot>` from
   your backup again.
 - **It keeps restarting at the HiBy logo:** data from the other system is probably still there. After a few failed
   starts Android offers "Factory data reset" by itself (step 7).

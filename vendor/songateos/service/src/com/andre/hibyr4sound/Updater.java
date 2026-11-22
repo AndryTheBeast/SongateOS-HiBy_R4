@@ -51,7 +51,7 @@ import java.util.regex.Pattern;
  * download : to <microSD>/Android/data/<this app>/files/ota/ (resumable), then SHA-256 against SHA256SUMS.txt and
  *            the whole-file signature against the SongateOS release certificate (res/raw/otacerts.zip). A file
  *            that fails is deleted.
- * install  : pre-flight checks (battery, standard R4 + HiBy vendor, slot a, SongateOS recovery with the OTA hook,
+ * install  : pre-flight checks (battery, standard R4 + HiBy vendor, slot a or b, SongateOS recovery with the OTA hook,
  *            file unchanged), then hands a small command to the module (root) which writes
  *            /metadata/songateos/ota.cmd, and reboots to recovery. The recovery hook installs and reboots.
  * result   : after the reboot the module publishes /metadata/songateos/ota.result as sys.hibyr4.ota_result.
@@ -596,10 +596,11 @@ public final class Updater {
         if (!READY.equals(p.getString("state", IDLE))) return "No verified update is waiting.";
         File f = new File(p.getString("file", "/nonexistent"));
         if (!f.isFile()) return "The update file is gone from the microSD card. Download it again.";
-        return preflightBasics(c, false);
+        // an update that brings the kept Google apps along needs the same recovery as a Google apps install
+        return preflightBasics(c, Gapps.keptWanted(c));
     }
 
-    /** Google apps: the same checks, and a recovery with hook 3 (it installs Google apps zips). */
+    /** Google apps: the same checks, and a recovery with hook 3, or hook 6 on slot b (it installs Google apps zips). */
     static String preflightBasics(Context c) { return preflightBasics(c, true); }
 
     static String preflightBasics(Context c, boolean gapps) {
@@ -616,7 +617,9 @@ public final class Updater {
             return "This is not a standard HiBy R4.";
         if (!sysprop("ro.vendor.build.fingerprint", "").startsWith("HiBy/R4/R4:"))
             return "HiBy's R4 vendor partition is not in place.";
-        if (!"_a".equals(sysprop("ro.boot.slot_suffix", ""))) return "SongateOS installs on slot a only.";
+        // either slot (2.1.0): HiBy's own updates leave an R4 on slot a or b; the installer writes the running slot
+        String slot = sysprop("ro.boot.slot_suffix", "");
+        if (!"_a".equals(slot) && !"_b".equals(slot)) return "Unknown active slot (" + slot + ").";
         String rec = sysprop("sys.hibyr4.ota_recovery", "");
         if (!rec.startsWith("ok")) {
             return rec.isEmpty() || rec.startsWith("none")
@@ -626,8 +629,12 @@ public final class Updater {
         if (!"1".equals(sysprop("sys.hibyr4.ready", ""))) return "The SongateOS service (module) is not running.";
         if (gapps) {
             Matcher m = Pattern.compile("hook([0-9]+)").matcher(rec);
-            if (!m.find() || Integer.parseInt(m.group(1)) < 3)
+            int hook = m.find() ? Integer.parseInt(m.group(1)) : 0;
+            if (hook < 3)
                 return "Your recovery can't install Google apps yet. Update it on the Recovery card first.";
+            // hooks 3-5 look for Google apps' folders on slot a only; hook 6 uses the running slot
+            if ("_b".equals(slot) && hook < 6)
+                return "On slot b, Google apps need a newer recovery (2026.11.22 or later). Update it on the Recovery card first.";
         }
         return null;
     }

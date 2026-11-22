@@ -42,6 +42,8 @@ SongateOS has no Google apps of its own. If you want the Play Store, pick one of
 - **Keep after updates** (on by default) adds your Google apps to every SongateOS update, so you never start without
   them. The package stays on the card for that; don't delete it.
 - **Switching** between Core and Basic works: install the other one.
+- **On slot b** (guide 1 shows your slot), Google apps need a recovery of version 2026.11.22 or newer; older ones
+  look for Google apps' folders on slot a. Update it on the Recovery card first.
 
 ### Removing Google apps
 
