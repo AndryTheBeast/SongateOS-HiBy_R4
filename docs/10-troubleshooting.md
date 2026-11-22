@@ -36,6 +36,8 @@
   then install again.
 - **"Cannot load Android system" or restarting over and over after the first install:** the data partition is still
   HiBy's, or from a SongateOS beta (different keys). In the recovery: **Wipe › Format Data**, type `yes`, then restart.
+- **"ERROR: cannot read the vendor partition" right after Format Data:** nothing was written. Format Data takes down
+  the recovery's view of the `super` partition until it restarts: **Reboot › Recovery**, then install the zip again.
 - **An update didn't install:** the logs are next to the zip on the card (`songateos_install.log` and
   `songateos_recovery_tail.log`). Attach them to a bug report.
 - **Google apps crash after installing:** restart once. If it keeps happening, remove them and install them again

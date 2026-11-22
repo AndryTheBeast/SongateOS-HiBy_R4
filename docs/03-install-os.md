@@ -40,7 +40,8 @@ on the computer. Internal storage is erased in step 2: save anything on it first
 2. **Format Data.** In OrangeFox or TWRP: **Wipe › Format Data**, type `yes`. HiBy's Android encrypts its data
    partition, and SongateOS can't use another system's data: without this step it stops at "Cannot load Android
    system" or keeps restarting. Do it even right after a factory reset in HiBy's recovery, if HiBy's system has
-   started once since.
+   started once since. **Then Reboot › Recovery** before step 3: Format Data also takes down the recovery's view of the
+   `super` partition, and the installer would stop with "cannot read the vendor partition" (nothing written).
 3. **Install the zip** from the microSD: OrangeFox › Files, or TWRP › Install. It checks the device, makes room in
    `super` (on R4s that installed a HiBy update, it removes HiBy's unused update leftovers there and first saves the old
    partition table next to the zip as `super_table_before_songateos.bin`; keep that file), writes `system_<slot>` and checks
@@ -67,8 +68,9 @@ keys. Android refuses to start a system with new keys over data made by the old 
 over a beta needs **Format Data** once:
 
 1. Save what you need from internal storage (the microSD isn't touched).
-2. In the recovery: **Wipe › Format Data**, type `yes`, **then** install the 2.1.0 zip (in this order: Format Data
-   also clears the record the installer leaves for the updater).
+2. In the recovery: **Wipe › Format Data**, type `yes`, then **Reboot › Recovery**, **then** install the 2.1.0 zip (in
+   this order: Format Data also clears the record the installer leaves for the updater, and the restart lets the
+   recovery see the `super` partition again).
 3. Reboot › System and set up Songate again. Bluetooth devices need pairing again.
 
 `vbmeta_<slot>` is already right if a beta ran. After this, updates keep your data again.
