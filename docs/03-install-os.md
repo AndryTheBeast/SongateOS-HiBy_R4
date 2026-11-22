@@ -31,8 +31,8 @@ on the computer. Internal storage is erased in step 2: save anything on it first
 looks like an empty card. No card reader? Put the card in the player, start the recovery, and copy the zip from the
 computer, then check it on the player:
 ```
-adb push songateos-2.1.0-R4.zip /external_sd/
-adb shell sha256sum /external_sd/songateos-2.1.0-R4.zip
+adb push songateos-2.1.1-R4.zip /external_sd/
+adb shell sha256sum /external_sd/songateos-2.1.1-R4.zip
 ```
 
 1. **Android's verification off in `vbmeta_<slot>`: already done** if you followed guide 2, which needs it to start
@@ -49,7 +49,8 @@ adb shell sha256sum /external_sd/songateos-2.1.0-R4.zip
    partition, and SongateOS can't use another system's data: without this step it stops at "Cannot load Android
    system" or keeps restarting. Do it even right after a factory reset in HiBy's recovery, if HiBy's system has
    started once since. **Then Reboot › Recovery** before step 3: Format Data also takes down the recovery's view of the
-   `super` partition, and the installer would stop with "cannot read the vendor partition" (nothing written).
+   `super` partition. (The 2.1.1 installer maps what it needs itself; 2.1.0's stopped with "cannot read the vendor
+   partition", nothing written.)
 3. **Install the zip** from the microSD: OrangeFox › Files, or TWRP › Install. It checks the device, makes room in
    `super` (on R4s that installed a HiBy update, it removes HiBy's unused update leftovers there and first saves the old
    partition table next to the zip as `super_table_before_songateos.bin`; keep that file), writes `system_<slot>` and checks

@@ -137,10 +137,18 @@ final class RecoverySwitch {
     static Bundle switchAsync(Context c, String kind) {
         if (!"twrp".equals(kind) && !"orangefox".equals(kind)) return SystemApi.err("bad_arg", "twrp or orangefox");
         if (sBusy) return SystemApi.err("busy", "Busy, try again in a moment");
-        if (prefs(c).getString(kind + "_url", "").isEmpty()) return SystemApi.err("not_found", "No package for that recovery yet, look again first");
         sBusy = true;
         Context app = c.getApplicationContext();
-        EX.execute(() -> { try { download(app, kind); } finally { sBusy = false; } });
+        // 2.1.1: look at the releases again first, every time. The list kept from the last look could point at a package
+        // that was replaced since (HTTP 404, with no way out on Songate's card; 2026-11-22).
+        EX.execute(() -> {
+            try {
+                check(app);
+                if ("error".equals(prefs(app).getString("state", ""))) return;
+                if (prefs(app).getString(kind + "_url", "").isEmpty()) { state(app, "error", "No package for that recovery in the releases."); return; }
+                download(app, kind);
+            } finally { sBusy = false; }
+        });
         return SystemApi.ok();
     }
 

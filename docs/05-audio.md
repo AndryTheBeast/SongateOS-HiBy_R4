@@ -74,6 +74,12 @@ Anything that changes the samples (app volume, ReplayGain, EQ, crossfade) turns 
 **Settings › HiBy audio › Output › Bit-perfect wired output**: on by default. Takes effect after a restart. When it's
 off, the wired outputs work as before (Android's own volume, no bit-perfect).
 
+**Settings › Sound & DAC › Output › Charge from USB audio** (from 2.1.1): on by default. Turn it off, and a USB DAC
+or speaker that also powers the R4 (a JBL Charge 6, say) no longer charges it: when such a device is plugged in while
+it's powering the player, the player stops drawing power from the port (the charger's input is suspended). The music
+isn't touched. Unplug it, or turn the setting back on, and charging comes back at once. A normal charger is never
+affected, and neither is a DAC the R4 powers itself.
+
 ## Notes for testing
 
 - On the R4, never cut `dumpsys media.audio_flinger` short (`| head`, `grep -m1`): HiBy's driver dumps into the same

@@ -225,6 +225,41 @@ last=""
 lastpid=""
 n=0
 POL=/vendor/etc/audio_policy_configuration.xml
+# ---------- USB audio devices don't charge the player (setting usb_nocharge, 2.1.1) ----------
+# A USB-C speaker or DAC that also supplies power (a JBL Charge 6, for example) charges the R4 while it plays. With the
+# setting on, the MP2731 charger's input_suspend stops the R4 drawing power from the port; the music data is untouched.
+# Decided once when the audio device appears, and only if power is coming in at that moment (charger 'online'): a DAC
+# that the R4 powers is never touched, and the decision never flips while the device stays plugged in. Released as soon
+# as no USB audio device is left, or the setting goes off. A normal charger is no audio device, so it always charges.
+CHG=/sys/class/power_supply/mp2731-charger
+NOCHG_FLAG=/data/songateos/hiby/usb_nocharge_active   # we set input_suspend (so only we clear it, also after a restart)
+usb_audio_present() {
+  for i in /sys/bus/usb/devices/*:*; do
+    [ "$(cat $i/bInterfaceClass 2>/dev/null)" = "01" ] && return 0
+  done
+  return 1
+}
+usb_charge_set() {   # 1 = don't draw power from the port, 0 = normal
+  echo "$1" > $CHG/input_suspend 2>/dev/null
+  if [ "$1" = "1" ]; then touch $NOCHG_FLAG; else rm -f $NOCHG_FLAG; fi
+  setprop sys.hibyr4.st_usb_nocharge "$1"
+  echo "$(date) usb charge guard: input_suspend=$1 (now $(cat $CHG/input_suspend 2>/dev/null), online $(cat $CHG/online 2>/dev/null))" >> $LOG
+}
+usb_charge_guard() {
+  want=$(sh $BIN/hiby_settings.sh get usb_nocharge)
+  if [ "$want" = "1" ] && usb_audio_present; then
+    if [ -z "$ucg_seen" ]; then                      # the audio device just appeared: decide once
+      ucg_seen=1
+      [ "$(cat $CHG/online 2>/dev/null)" = "1" ] && usb_charge_set 1
+    fi
+  else
+    ucg_seen=
+    [ -f $NOCHG_FLAG ] && usb_charge_set 0
+  fi
+}
+[ -f $NOCHG_FLAG ] && usb_charge_set 0               # a restart while it was on: start clean, decide again
+setprop sys.hibyr4.st_usb_nocharge 0
+
 while true; do
   # Every ~10 s: make sure the policy overlay (Wired Headphones ports) is still mounted.
   # Act only after 3 consecutive misses (avoids false alarms while Magisk sets up mounts at boot).
@@ -247,6 +282,8 @@ while true; do
       [ "$old" = "schedutil" ] || { echo schedutil > $g 2>/dev/null; echo "$(date) CPU governor policy$c was $old -> $(cat $g)" >> $LOG; }
     done
   fi
+  # every 2 s: USB audio devices don't charge the player (setting usb_nocharge)
+  [ $((n % 2)) -eq 0 ] && usb_charge_guard
   # every 3 s: status LED (charging indicator / screen state / custom pattern), writes only on change
   [ $((n % 3)) -eq 0 ] && sh $BIN/hiby_settings.sh led_refresh >/dev/null 2>&1
   # audioserver (re)started -> AudioFlinger read master volume 0.4 from the HAL again (see master_vol above)

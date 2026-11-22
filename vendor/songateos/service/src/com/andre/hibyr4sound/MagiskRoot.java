@@ -113,10 +113,16 @@ final class MagiskRoot {
 
     static Bundle installAsync(Context c) {
         if (sBusy) return SystemApi.err("busy", "Busy, try again in a moment");
-        if (prefs(c).getString("url", "").isEmpty()) return SystemApi.err("not_found", "Look for Magisk first");
         sBusy = true;
         Context app = c.getApplicationContext();
-        EX.execute(() -> { try { download(app); } finally { sBusy = false; } });
+        // 2.1.1: look for Magisk's latest release first, every time (Songate never called root_check, so on a fresh
+        // 2.1.0 Install answered "Look for Magisk first" and did nothing; found by a slot-b tester, 2026-11-22)
+        EX.execute(() -> {
+            try {
+                check(app);
+                if (!"error".equals(prefs(app).getString("state", "")) && !prefs(app).getString("url", "").isEmpty()) download(app);
+            } finally { sBusy = false; }
+        });
         return SystemApi.ok();
     }
 

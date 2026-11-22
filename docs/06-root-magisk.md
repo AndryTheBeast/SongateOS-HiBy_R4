@@ -3,8 +3,9 @@
 [Magisk](https://github.com/topjohnwu/Magisk) gives root by patching the player's **boot image**. Nothing else on the
 player changes, and undoing it is one command.
 
-**On SongateOS 2.1.0, use this guide.** Songate › Settings › Root › **Install Magisk** answers "Look for Magisk
-first" and does nothing: a bug, fixed in the next update. This manual way was tested on SongateOS, on slot a and b.
+**On SongateOS 2.1.1 and later,** Songate › Settings › Root › **Install Magisk** does this for you. (In 2.1.0 it
+answered "Look for Magisk first" and did nothing: use this guide there.) This manual way was tested on SongateOS, on
+slot a and b.
 
 > **Not from the recovery.** Flashing Magisk's zip in TWRP or OrangeFox (including OrangeFox's Magisk add-on) doesn't
 > work on the R4: the recovery can't read the encrypted data partition, so the install fails with nothing written,

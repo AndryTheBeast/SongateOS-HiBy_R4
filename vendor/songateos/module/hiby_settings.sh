@@ -48,6 +48,7 @@ vol_boot|[0-9]|[1-9][0-9]|100|20
 btn_wake|0|1|0
 out_rate|44100|48000|88200|96000|176400|192000|352800|384000|96000
 bit_perfect|0|1|1
+usb_nocharge|0|1|0
 EOF
 }
 
@@ -172,6 +173,7 @@ apply_key() {
     btn_wake) ;;                         # read by post-fs-data.sh at the next boot (key layout, see there)
     out_rate)      ( sh $0 rate_switch "$v" >/dev/null 2>&1 & ) ;;   # in the background: it restarts audioserver
     bit_perfect) ;;                      # used at the next boot (post-fs-data.sh libraries, service DacVolume)
+    usb_nocharge) ;;                     # read every 2 s by service.sh (usb_charge_guard)
     vol_steps|vol_restore|vol_boot) ;;   # used at boot (post-fs-data.sh / service.sh)   # read by post-fs-data.sh at the next boot (ro.config.media_vol_steps via resetprop)
   esac
   echo "$(date) setting $k=$v applied" >> $LOG

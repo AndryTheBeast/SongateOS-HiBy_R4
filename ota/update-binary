@@ -24,7 +24,7 @@ META_MNT=""; META_OWN=0; VEND_OWN=0
 
 TRACE=/tmp/songateos_install.log
 ui_print() { echo "ui_print $*" >> /proc/self/fd/$OUTFD; echo "ui_print" >> /proc/self/fd/$OUTFD; trace "UI: $*"; }
-trace() { echo "$(date +%T) $*" >> $TRACE; }
+trace() { echo "$(date -u +%T) $*" >> $TRACE; }   # UTC, like the hook's log (the recovery's own time zone was 1 h ahead)
 
 # A writable /metadata: the recovery may already have it mounted (possibly read-only), so test by writing.
 meta_ok() { touch "$1/.sgos_w" 2>>$TRACE && rm -f "$1/.sgos_w"; }
@@ -142,6 +142,13 @@ case "$DTMODEL" in
 esac
 tr '\000' ' ' < /proc/device-tree/compatible 2>/dev/null | grep -q "qcom,trinket" || abort "not an SM6125 (trinket)"
 case "$DTMODEL" in *EVA*|*eva*) abort "R4 EVA is not supported" ;; esac
+# Format Data in TWRP/OrangeFox unmaps super's partitions until the recovery restarts ("cannot read the vendor
+# partition", 2026-11-22). Map the two the installer reads, if they're missing (mapping only, nothing written).
+for p in vendor$SLOT system$SLOT; do
+  if [ ! -b /dev/block/mapper/$p ] && command -v lptools >/dev/null 2>&1; then
+    lptools map $p >/dev/null 2>&1; trace "mapped $p (was missing): $([ -b /dev/block/mapper/$p ] && echo ok || echo failed)"
+  fi
+done
 # HiBy's own vendor partition for the standard R4 must be in place (SongateOS runs on it)
 mkdir -p $TMP/vendor
 if mount -t ext4 -o ro /dev/block/mapper/vendor$SLOT $TMP/vendor 2>/dev/null; then

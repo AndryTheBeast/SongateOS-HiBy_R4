@@ -215,6 +215,9 @@ public final class Updater {
         SharedPreferences p = prefs(c);
         String prev = p.getString("state", IDLE);
         if (READY.equals(prev) && !user) return;     // a verified update is waiting for the user
+        // 2.1.1: the recovery packages' list is looked at with every update check, so the Recovery card never offers a
+        // package that was replaced in the releases since (it answered HTTP 404, 2026-11-22). Its own thread; skipped if busy.
+        RecoverySwitch.checkAsync(c);
         state(c, CHECKING, null);
         // a newer SongateOS zip copied to the microSD card wins: no download needed (and works while the repository is
         // private). Checked (version file + SongateOS signature) here, and again by the recovery.

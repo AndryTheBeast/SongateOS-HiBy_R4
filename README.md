@@ -7,7 +7,7 @@
 </p>
 <p align="center"><b>Android 14 for the HiBy R4, built around Songate.</b><br>
 The player starts straight into <a href="https://github.com/AndryTheBeast/Songate">Songate</a>, and everything around it follows: HiBy's DAC on 3.5 mm and 4.4 mm, bit-perfect with the volume in the DAC, your earbuds' noise cancelling and battery, the status lights and the hold switch, all in Songate. Updates come to the player itself.<br>
-By <a href="https://github.com/AndryTheBeast"><b>AndryTheBeast</b></a> · version 2.1.0 · based on <a href="https://lineageos.org"><b>LineageOS 21</b></a> and <a href="https://github.com/TrebleDroid"><b>TrebleDroid</b></a><br>
+By <a href="https://github.com/AndryTheBeast"><b>AndryTheBeast</b></a> · version 2.1.1 · based on <a href="https://lineageos.org"><b>LineageOS 21</b></a> and <a href="https://github.com/TrebleDroid"><b>TrebleDroid</b></a><br>
 <a href="../../releases"><b>⬇️ Download</b></a> · <a href="https://github.com/AndryTheBeast/Songate"><b>🎵 Songate</b></a> · <a href="docs/00-read-first.md"><b>⚠️ Read this first</b></a></p>
 
 
@@ -124,8 +124,8 @@ dates. Switch between them in Settings › Recovery. Details: [guide 2](docs/02-
 
 ### 🔓 Root
 
-Optional, with Magisk, by patching the boot image with the Magisk app ([guide 6](docs/06-root-magisk.md)). In 2.1.0,
-Settings › Root › Install Magisk doesn't start the install yet (fixed in the next update).
+Optional, with Magisk: Settings › Root › Install Magisk (from 2.1.1), or by patching the boot image with the Magisk
+app by hand ([guide 6](docs/06-root-magisk.md)).
 
 </details>
 
@@ -161,8 +161,7 @@ and anyone's personal backup.
 - **Spotify** can be searched from Songate but plays only inside Spotify: it doesn't accept "play" requests from other apps.
 - **Kernel:** HiBy's prebuilt kernel is used; its source isn't published, so kernel-level features such as KernelSU aren't possible.
 - **Signing:** SongateOS is signed with its own keys from 2.1.0. The betas used Android's public test keys, so going from a beta to 2.1.0 needs **Format Data** once ([guide 3](docs/03-install-os.md#coming-from-a-songateos-beta)).
-- **Root from Settings:** Install Magisk answers "Look for Magisk first" in 2.1.0. Use [guide 6](docs/06-root-magisk.md) instead.
-- **4.4 mm line out** wasn't tested on the device for 2.1.0 (its headphone mode was).
+- **4.4 mm line out** wasn't tested on the device (its headphone mode was).
 - **USB speakers that charge the player:** after unplugging one, the R4 was seen once not to sleep until the next restart. Unplugging USB DACs that don't charge it is fine. Being looked into.
 
 </details>

@@ -23,6 +23,7 @@ export LC_ALL=C
 set +e; source build/envsetup.sh >/dev/null; set -e
 lunch songateos_r4-ap2a-userdebug
 export LINEAGE_BUILD=songateos_r4   # LineageOS's board config needs it, as for lineage_* products
+export BUILD_USERNAME=songateos BUILD_HOSTNAME=songateos   # a neutral build stamp (ro.build.user, ro.build.host)
 # secure adb (2.1.0): no WITH_ADB_INSECURE; apply_adb.py removes the GSI base's ro.adb.secure=0
 m -j$J systemimage
 ls -l "$OUT/system.img"; sha256sum "$OUT/system.img"

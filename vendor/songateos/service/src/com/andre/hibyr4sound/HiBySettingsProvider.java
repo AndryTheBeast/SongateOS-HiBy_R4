@@ -73,8 +73,9 @@ public class HiBySettingsProvider extends ContentProvider {
             {"btn_wake", "0|1"},
             {"bit_perfect", "0|1"},
             {"out_rate", "44100|48000|88200|96000|176400|192000|352800|384000"},
+            {"usb_nocharge", "0|1"},   // 2.1.1: a USB audio device (DAC, speaker) that powers the R4 doesn't charge it
     };
-    static final String[] STATUS = {"ready", "st_output", "st_rate", "st_led", "st_out_rate", "st_quality"};
+    static final String[] STATUS = {"ready", "st_output", "st_rate", "st_led", "st_out_rate", "st_quality", "st_usb_nocharge"};
 
     private static Method sGet, sSet;
 

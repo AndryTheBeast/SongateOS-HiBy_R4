@@ -93,6 +93,28 @@ stage() {  # $1 nonce
   setprop sys.hibyr4.ota_result ""
   setprop sys.hibyr4.ota_state "staged:$1"
   log "staged update ${ver:-(none)} (${zip:-no system}) gapps ${gname:-(none)}"
+  # 2.1.1: after a Google apps install, its log goes on the card next to the package (gapps_log_copy below)
+  if [ -n "$gzip" ]; then echo "$gzip" > $D/gapps_log.pending; else rm -f $D/gapps_log.pending; fi
+}
+
+# Google apps install log on the microSD card (2.1.1, asked for by a tester): once the recovery has run after a Google
+# apps request (its log in /metadata is newer than the request), copy the hook's log and the recovery's log next to
+# the package as songateos_gapps.log. Retried until the card is mounted; the request mark is dropped afterwards.
+gapps_log_copy() {
+  local pend=$D/gapps_log.pending rec=$D/last_recovery.log gz m dst
+  [ -f $pend ] && [ -f $rec ] || return
+  [ "$(stat -c %Y $rec)" -ge "$(stat -c %Y $pend)" ] || return      # the recovery hasn't run since the request
+  gz=$(head -1 $pend)
+  case "$gz" in ""|/*|*..*) rm -f $pend; return ;; esac
+  for m in /mnt/media_rw/*; do
+    [ -f "$m/$gz" ] || continue
+    dst="$(dirname "$m/$gz")/songateos_gapps.log"
+    { echo "SongateOS $(getprop ro.songateos.version) - Google apps install log, $(date)"
+      echo "package: $gz"; echo; echo "== hook.log"; cat $D/hook.log 2>/dev/null
+      echo; echo "== recovery log"; cat $rec; } > "$dst.tmp" 2>/dev/null && mv -f "$dst.tmp" "$dst" && {
+        rm -f $pend; log "google apps log copied next to the package"; }
+    return
+  done
 }
 
 REC_DIR=/data/user_de/0/com.andre.hibyr4.service/files
@@ -252,6 +274,7 @@ clock; tick=0; pwr=""
 last=$(getprop sys.hibyr4.ota_req)
 while true; do
   tick=$((tick + 1)); [ $((tick % 300)) = 0 ] && clock
+  [ $((tick % 15)) = 0 ] && gapps_log_copy
   p=$(getprop sys.powerctl); [ -n "$p" ] && [ "$p" != "$pwr" ] && { pwr=$p; clock; sync; }
   req=$(getprop sys.hibyr4.ota_req)
   if [ "$req" != "$last" ]; then
@@ -259,7 +282,7 @@ while true; do
     n=${req#*:}
     case "$req" in
       stage:*) stage "$n" ;;
-      unstage:*) rm -f $D/ota.cmd; sync; setprop sys.hibyr4.ota_state "unstaged:$n"; log "unstaged" ;;
+      unstage:*) rm -f $D/ota.cmd $D/gapps_log.pending; sync; setprop sys.hibyr4.ota_state "unstaged:$n"; log "unstaged" ;;
       ack:*) rm -f $D/ota.result; sync; setprop sys.hibyr4.ota_result "" ;;
       recheck:*) recovery_check ;;
       rec:*) rec_switch "$n" ;;
