@@ -44,8 +44,9 @@ fastboot --disable-verity --disable-verification flash vbmeta_<slot> <your own b
 fastboot reboot recovery
 ```
 
-With HiBy's stock vbmeta (verification on), the bootloader doesn't start a custom recovery: it falls back to HiBy's
-recovery inside `boot`. The `vbmeta` line turns verification off (one flag, from your own backup).
+The `vbmeta` line turns verification off (one flag, from your own backup), which SongateOS needs. On HiBy's firmware,
+`fastboot reboot recovery` from HiBy's fastbootd can start HiBy's own recovery instead: power off and start the
+recovery with the buttons (from off, Power + Previous).
 
 Undo: flash your own stock recovery back the same way (`fastboot flash recovery_<slot> stock_recovery.img`).
 

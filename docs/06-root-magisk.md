@@ -3,11 +3,15 @@
 [Magisk](https://github.com/topjohnwu/Magisk) gives root by patching the player's **boot image**. Nothing else on the
 player changes, and undoing it is one command.
 
-**On SongateOS** the easy way is **Songate › Settings › Root**: it does all of this for you, on your slot. This guide
-is the manual way, and the one for HiBy's firmware.
+**On SongateOS 2.1.0, use this guide.** Songate › Settings › Root › **Install Magisk** answers "Look for Magisk
+first" and does nothing: a bug, fixed in the next update. This manual way was tested on SongateOS, on slot a and b.
 
-> **Tested so far:** root with Magisk on `boot_a` works on this project's own R4, running LineageOS (the base of
-> SongateOS). On HiBy's stock firmware, an R4 owner in the [XDA thread](https://xdaforums.com/t/4746303/) reports the
+> **Not from the recovery.** Flashing Magisk's zip in TWRP or OrangeFox (including OrangeFox's Magisk add-on) doesn't
+> work on the R4: the recovery can't read the encrypted data partition, so the install fails with nothing written,
+> and OrangeFox may need a restart afterwards. Patch the boot image with the Magisk app, as below.
+
+> **Tested so far:** root with Magisk works on `boot_a` on this project's own R4, running LineageOS (the base of
+> SongateOS), and on `boot_b` on a tester's R4 running SongateOS 2.1.0, removal included. On HiBy's stock firmware, an R4 owner in the [XDA thread](https://xdaforums.com/t/4746303/) reports the
 > same method working (firmware 1.70); this project hasn't tried it there itself. The steps are the same either way.
 >
 > **Do [guide 1](01-backup-edl.md) first.** Your `boot_<slot>.bin` (your slot, guide 1) is both what you patch and how you undo it.
@@ -48,10 +52,9 @@ fastboot reboot
 ```
 
 - Use **`boot_<slot>`** (your slot), not plain `boot` and not the other slot.
-- **OrangeFox's Magisk add-on** (its built-in installer) works too, instead of steps 2 and 3: it patches the boot
-  partition of the slot the player started on by itself, so there's nothing to choose. Check the checksum of step 1
-  first all the same.
 - After the restart, open Magisk: it shows the installed version, and apps can ask for root.
+- **Root over adb** (`adb shell su`) is refused at first (`su: request rejected (2000)`): in Magisk choose
+  **Superuser › + › Shell** to allow it.
 
 ## Updates
 

@@ -60,14 +60,15 @@ fastboot reboot recovery
 ```
 
 - After `adb reboot fastboot` the R4 shows the recovery screen with **fastbootd** at the top. Check with
-  `fastboot devices` that the PC sees it.
+  `fastboot devices` that the PC sees it. **On Windows it may show nothing** the first time: HiBy's fastbootd needs a
+  driver. Install [Zadig](https://zadig.akeo.ie), choose **Options › List All Devices**, pick **`R4`**, check the USB ID
+  reads **`18D1 4EE0`**, set **WinUSB** and click **Replace Driver**. (TWRP's and OrangeFox's fastbootd need nothing.)
 - **The third line turns Android's verification off in `vbmeta_<slot>`**, using the file from **your own** backup.
-  HiBy's firmware has verification on, and with it on the R4 doesn't start TWRP or OrangeFox: it falls back to
-  HiBy's own recovery instead. SongateOS needs verification off too, so guide 3 counts on this step. It changes one
-  flag and nothing else; to undo it, flash the same file without the two `--disable` options.
-- The recovery starts. **If HiBy's own recovery appears instead,** verification is still on: in its menu choose
-  **Enter fastboot**, run the `vbmeta` line above, then `fastboot reboot recovery`. Your TWRP or OrangeFox is
-  already in place (tested on an R4 fresh from HiBy's firmware, November 2026).
+  HiBy's firmware has it on; SongateOS needs it off (guide 3 counts on this step). It changes one flag and nothing
+  else; to undo it, flash the same file without the two `--disable` options.
+- The recovery starts. **If HiBy's own recovery appears instead** (seen on two R4s fresh from HiBy's firmware):
+  your TWRP or OrangeFox is already in place. Choose **Power off** in HiBy's menu, then start the recovery with the
+  buttons (below). If HiBy's recovery still appears, check that the `vbmeta` line above ran.
 - Next time, open the recovery with `adb reboot recovery`, or with the buttons: from off, hold
   **Power + Previous**; when the screen turns on, let go of Power and keep holding Previous until the recovery
   appears.
@@ -79,7 +80,7 @@ fastboot reboot recovery
 | Look | classic | more modern, with more options |
 | Flash images and zips, terminal, file manager | yes | yes |
 | Backups to microSD or USB OTG | yes | yes |
-| Built-in extras | – | Magisk installer and uninstaller, kept on the microSD card |
+| Built-in extras | – | Magisk installer and uninstaller on the microSD card (they don't work on the R4: use [guide 6](06-root-magisk.md)) |
 | Its own folder (logs, extras) | – | `Fox/` on the microSD card |
 
 **OrangeFox on the R4 keeps its folder on the microSD card** (`Fox/`), because it can't read the internal storage. The

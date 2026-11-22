@@ -27,6 +27,14 @@ You need OrangeFox or TWRP in the recovery (guide 2), your EDL backup (guide 1),
 card (checked against `SHA256SUMS.txt`), and [Android platform tools](https://developer.android.com/tools/releases/platform-tools)
 on the computer. Internal storage is erased in step 2: save anything on it first. Music on the microSD stays.
 
+**The microSD card must be in the player.** Without one, OrangeFox still shows an empty `/external_sd` folder that
+looks like an empty card. No card reader? Put the card in the player, start the recovery, and copy the zip from the
+computer, then check it on the player:
+```
+adb push songateos-2.1.0-R4.zip /external_sd/
+adb shell sha256sum /external_sd/songateos-2.1.0-R4.zip
+```
+
 1. **Android's verification off in `vbmeta_<slot>`: already done** if you followed guide 2, which needs it to start
    the recovery. HiBy's firmware has it on, and SongateOS can't start with it on. The installer checks this first and
    stops with `vbmeta_<slot> flags are 00000000, need 00000003` (nothing written) if it's still on. In that case, with

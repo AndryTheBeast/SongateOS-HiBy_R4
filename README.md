@@ -124,7 +124,8 @@ dates. Switch between them in Settings › Recovery. Details: [guide 2](docs/02-
 
 ### 🔓 Root
 
-Optional, with Magisk, from Settings › Root or by hand ([guide 6](docs/06-root-magisk.md)).
+Optional, with Magisk, by patching the boot image with the Magisk app ([guide 6](docs/06-root-magisk.md)). In 2.1.0,
+Settings › Root › Install Magisk doesn't start the install yet (fixed in the next update).
 
 </details>
 
@@ -153,13 +154,14 @@ and anyone's personal backup.
 <summary><b>⚠️ Known limits</b></summary>
 
 - **Model:** the HiBy R4 standard model only. The R4 EVA uses different storage and was never tested.
-- **Slot a or b:** HiBy's own updates leave a player on either slot; SongateOS installs on the one your player runs on ([guide 1](docs/01-backup-edl.md) shows yours). Never switch slots. Slot b support is new in 2.1.0 and is being tested on a slot-b player; on slot b, use the recoveries of version 2026.11.22 or newer (in the 2.1.0 release).
+- **Slot a or b:** HiBy's own updates leave a player on either slot; SongateOS installs on the one your player runs on ([guide 1](docs/01-backup-edl.md) shows yours). Never switch slots. Slot b was tested on a player with HiBy's 1.80 firmware (install, Google apps, Magisk); on slot b, use the recoveries of version 2026.11.22 or newer (in the 2.1.0 release).
 - **Firmware:** tests were only made on HiBy's firmware of August 2026.
 - **Updates need a microSD card:** the recovery can't read the encrypted internal storage. Without a card, update from a computer ([guide 3](docs/03-install-os.md#updates-need-a-microsd-card)).
 - **Bluetooth 5.0:** no LE Audio or LC3. AAC was tested; other codecs are still to be checked.
 - **Spotify** can be searched from Songate but plays only inside Spotify: it doesn't accept "play" requests from other apps.
 - **Kernel:** HiBy's prebuilt kernel is used; its source isn't published, so kernel-level features such as KernelSU aren't possible.
 - **Signing:** SongateOS is signed with its own keys from 2.1.0. The betas used Android's public test keys, so going from a beta to 2.1.0 needs **Format Data** once ([guide 3](docs/03-install-os.md#coming-from-a-songateos-beta)).
+- **Root from Settings:** Install Magisk answers "Look for Magisk first" in 2.1.0. Use [guide 6](docs/06-root-magisk.md) instead.
 - **4.4 mm line out** wasn't tested on the device for 2.1.0 (its headphone mode was).
 - **USB speakers that charge the player:** after unplugging one, the R4 was seen once not to sleep until the next restart. Unplugging USB DACs that don't charge it is fine. Being looked into.
 
@@ -184,7 +186,7 @@ hasn't published.
 
 - 🧱 **[LineageOS](https://lineageos.org)** and **[TrebleDroid](https://github.com/TrebleDroid)** (and Andy Yan's [lineage_build_unified](https://github.com/AndyCGYan/lineage_build_unified)): the base system.
 - 🛟 **[TWRP](https://twrp.me)** and **[OrangeFox Recovery](https://orangefox.download)**: the recoveries, built from their sources.
-- 🔓 **[Magisk](https://github.com/topjohnwu/Magisk)** (GPL-3.0): root, downloaded from its own releases when you choose it in Settings › Root. SongateOS itself never includes it; only the OrangeFox recovery package carries OrangeFox's standard Magisk installer and uninstaller, as every OrangeFox build does.
+- 🔓 **[Magisk](https://github.com/topjohnwu/Magisk)** (GPL-3.0): root, downloaded from its own releases when you choose it in Settings › Root. SongateOS itself never includes it; only the OrangeFox recovery package carries OrangeFox's standard Magisk installer and uninstaller, as every OrangeFox build does (on the R4 they can't be used: see guide 6).
 - 🧩 **[NikGapps](https://nikgapps.com)** and **[MindTheGapps](https://github.com/MindTheGapps)**: Google apps, downloaded from their makers when you choose them. SongateOS never hosts Google's apps.
 - 🎧 **[LibrePods](https://github.com/librepods-org/librepods)** and **[GalaxyBudsClient](https://github.com/timschneeb/GalaxyBudsClient)**: their published protocol notes made the earbud controls possible. SongateOS's code is its own; none of theirs is included.
 - 🔤 **Inter** and **Fraunces** (SIL Open Font Licence), as in Songate.
