@@ -40,8 +40,12 @@ can't wipe or restore them.
 ```
 adb reboot fastboot
 fastboot flash recovery_<slot> <recovery image>.img
+fastboot --disable-verity --disable-verification flash vbmeta_<slot> <your own backup of vbmeta_<slot>>
 fastboot reboot recovery
 ```
+
+With HiBy's stock vbmeta (verification on), the bootloader doesn't start a custom recovery: it falls back to HiBy's
+recovery inside `boot`. The `vbmeta` line turns verification off (one flag, from your own backup).
 
 Undo: flash your own stock recovery back the same way (`fastboot flash recovery_<slot> stock_recovery.img`).
 

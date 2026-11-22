@@ -27,14 +27,15 @@ You need OrangeFox or TWRP in the recovery (guide 2), your EDL backup (guide 1),
 card (checked against `SHA256SUMS.txt`), and [Android platform tools](https://developer.android.com/tools/releases/platform-tools)
 on the computer. Internal storage is erased in step 2: save anything on it first. Music on the microSD stays.
 
-1. **Turn Android's verification off in `vbmeta_<slot>`.** HiBy's firmware has it on, and SongateOS can't start with it
-   on. The installer checks this first and stops with `vbmeta_<slot> flags are 00000000, need 00000003` (nothing written)
-   if it's still on. Use the `vbmeta_<slot>.bin` from **your own** backup. With the R4 in the recovery and connected by USB:
+1. **Android's verification off in `vbmeta_<slot>`: already done** if you followed guide 2, which needs it to start
+   the recovery. HiBy's firmware has it on, and SongateOS can't start with it on. The installer checks this first and
+   stops with `vbmeta_<slot> flags are 00000000, need 00000003` (nothing written) if it's still on. In that case, with
+   the R4 in the recovery and connected by USB, use the `vbmeta_<slot>.bin` from **your own** backup:
    ```
    adb reboot fastboot
    fastboot --disable-verity --disable-verification flash vbmeta_<slot> D:\R4_backup\vbmeta_<slot>.bin
    ```
-   This changes one flag in `vbmeta_<slot>` and nothing else. Then choose **Enter recovery** on the fastbootd screen.
+   This changes one flag in `vbmeta_<slot>` and nothing else. Then `fastboot reboot recovery`.
    To undo it, flash the same file without the two `--disable` options.
 2. **Format Data.** In OrangeFox or TWRP: **Wipe › Format Data**, type `yes`. HiBy's Android encrypts its data
    partition, and SongateOS can't use another system's data: without this step it stops at "Cannot load Android

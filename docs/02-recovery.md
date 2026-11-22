@@ -55,12 +55,20 @@ built into the recovery:
 ```
 adb reboot fastboot
 fastboot flash recovery_<slot> <recovery>.img
+fastboot --disable-verity --disable-verification flash vbmeta_<slot> D:\R4_backup\vbmeta_<slot>.bin
 fastboot reboot recovery
 ```
 
 - After `adb reboot fastboot` the R4 shows the recovery screen with **fastbootd** at the top. Check with
   `fastboot devices` that the PC sees it.
-- The recovery starts. Next time, open it with `adb reboot recovery`, or with the buttons: from off, hold
+- **The third line turns Android's verification off in `vbmeta_<slot>`**, using the file from **your own** backup.
+  HiBy's firmware has verification on, and with it on the R4 doesn't start TWRP or OrangeFox: it falls back to
+  HiBy's own recovery instead. SongateOS needs verification off too, so guide 3 counts on this step. It changes one
+  flag and nothing else; to undo it, flash the same file without the two `--disable` options.
+- The recovery starts. **If HiBy's own recovery appears instead,** verification is still on: in its menu choose
+  **Enter fastboot**, run the `vbmeta` line above, then `fastboot reboot recovery`. Your TWRP or OrangeFox is
+  already in place (tested on an R4 fresh from HiBy's firmware, November 2026).
+- Next time, open the recovery with `adb reboot recovery`, or with the buttons: from off, hold
   **Power + Previous**; when the screen turns on, let go of Power and keep holding Previous until the recovery
   appears.
 
@@ -123,6 +131,7 @@ From Android or the custom recovery:
 adb reboot fastboot
 fastboot flash recovery_a D:\R4_backup\recovery_a.bin
 fastboot flash recovery_b D:\R4_backup\recovery_b.bin      (both, if a zip wrote both; else only recovery_<slot>)
+fastboot flash vbmeta_<slot> D:\R4_backup\vbmeta_<slot>.bin      (verification back on; only if you don't run SongateOS)
 fastboot reboot
 ```
 

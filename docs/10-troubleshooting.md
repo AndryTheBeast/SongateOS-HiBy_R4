@@ -8,6 +8,9 @@
 - **Nothing on the screen at all:** charge it for 30 minutes, then try again. If the recovery doesn't start either,
   restore it from your EDL backup ([guide 1](01-backup-edl.md#restore-one-partition)).
 - **Going back to HiBy's firmware:** [guide 7](07-back-to-stock.md).
+- **HiBy's own recovery starts instead of TWRP or OrangeFox:** Android's verification is still on in
+  `vbmeta_<slot>` (it is on HiBy's firmware). See [guide 2, step 3](02-recovery.md#3-flash-it-from-fastbootd): your
+  recovery is already in place, only the `vbmeta` line is missing.
 
 ## Sound
 

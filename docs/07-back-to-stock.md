@@ -28,8 +28,8 @@ Nothing else is needed: your files and settings stay.
 Another system changes the `super` partition (system, vendor, product), `vbmeta` and often `boot`. Putting them all
 back is done with EDL, because the backup holds `super` as one 6 GB image.
 
-> This full restore hasn't been tested end to end on an R4 yet. Every file comes from your own backup and none of them
-> is a protected partition, but read each step and go slowly.
+> Tested end to end on an R4 in November 2026: from SongateOS, these steps gave HiBy's setup screen on the first start.
+> Every file comes from your own backup and none of them is a protected partition. Read each step and go slowly.
 
 1. **Save your files.** Step 2 erases internal storage. Music on the microSD stays.
 2. **Erase the other system's data first,** while your custom recovery is still installed: in TWRP or OrangeFox,
@@ -42,7 +42,7 @@ back is done with EDL, because the backup holds `super` as one 6 GB image.
    - `vbmeta_system_<slot>.bin`
    - `recovery_<slot>.bin`
    - `super.bin`
-   - `imagefv.bin` (only if you changed the boot logo)
+   - `imagefv_<slot>.bin` (the boot logo: SongateOS changes it)
 
    **Nothing else.** In particular, no `xbl`, `tz`, `abl`, `persist`, `modemst`, `fsg`, `devinfo`, `frp`, `privdata`
    or `gpt` files.
@@ -51,16 +51,20 @@ back is done with EDL, because the backup holds `super` as one 6 GB image.
    ```
    .venv\Scripts\python edl.py wl D:\R4_restore --memory=emmc --loader=LOADER
    ```
-   `wl` writes each file to the partition with the same name. It takes a few minutes, mostly for `super`.
+   `wl` writes each file to the partition with the same name. It takes a few minutes, mostly for `super` (about
+   4 minutes for 6 GB).
 
    You can also write one partition per EDL session with `edl.py w <partition> <file>` instead, if you prefer to go
    step by step.
 6. Leave EDL with **Power + Next** (hold until the screen turns on, then let go). The first start takes a few minutes,
-   and you're back on HiBy's firmware. For a fully clean start, open HiBy's stock recovery first (from off, hold
-   **Power + Previous**, let go of Power when the screen turns on and keep holding Previous) and choose
-   **Wipe data/factory reset**. This exact path was tested on an R4 in November 2026.
+   and you're back on HiBy's firmware, at its setup screen. (If you skipped step 2: turn the player off, start HiBy's
+   stock recovery with the buttons, from off **Power + Previous**, let go of Power when the screen turns on and keep
+   holding Previous, and choose **Wipe data/factory reset**.)
 7. If Android shows **"Cannot load Android system"** instead, choose **Factory data reset**: some data from the other
    system was left behind.
+
+Your backup's `vbmeta_<slot>` turns Android's verification back on. To put TWRP or OrangeFox in again later, follow
+guide 2 as written: it turns verification off before starting the recovery.
 
 ## If something goes wrong
 

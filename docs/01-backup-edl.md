@@ -132,7 +132,12 @@ So for **every** edl command:
 3. When it ends, leave EDL (Power + Next) and enter it again before the next command.
 
 If an edl command hangs on "Waiting for the device": close it (Ctrl+C, or end the leftover `python` process in Task
-Manager), leave EDL with the buttons, enter it again, and start the command again.
+Manager), leave EDL with the buttons, enter it again, and start the command again. If the `python` process won't
+close, unplug the USB cable: that releases it.
+
+Run edl commands in a normal PowerShell or Command Prompt window. If you save their output to a file instead
+(`> log.txt`), first run `set PYTHONIOENCODING=utf-8` (PowerShell: `$env:PYTHONIOENCODING="utf-8"`): without it, edl
+stops at its first progress bar, part-way through the first partition. Running the same command again finishes it.
 
 ## Make the backup
 
