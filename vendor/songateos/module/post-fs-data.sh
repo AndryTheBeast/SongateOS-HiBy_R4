@@ -123,6 +123,10 @@ APKS=$(for p in /system/priv-app /system/app /system/product/priv-app /system/pr
          ls -l $p/*/*.apk 2>/dev/null | awk '{print $5, $NF}'; done | sort | sha256sum | cut -d' ' -f1)
 if [ "$APKS" != "$(cat $D/system_apks.sha 2>/dev/null)" ]; then
   rm -rf /data/system/package_cache/*
+  # 2.2.1: also the overlays' saved maps (idmaps). After the 2.1.1 update SystemUI read a font entry through a stale
+  # 2.1.0 map and crashed once (IndexOutOfBounds in the notification footer), costing an extra restart. Android makes
+  # them again at the start (OverlayManager / idmap2d).
+  rm -rf /data/resource-cache/*
   echo "$APKS" > $D/system_apks.sha
-  echo "$(date) post-fs-data: system apps changed: Android's package cache cleared" >> $L
+  echo "$(date) post-fs-data: system apps changed: Android's package cache and overlay maps cleared" >> $L
 fi

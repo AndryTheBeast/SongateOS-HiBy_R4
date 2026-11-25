@@ -7,7 +7,7 @@
 </p>
 <p align="center"><b>Android 14 for the HiBy R4, built around Songate.</b><br>
 The player starts straight into <a href="https://github.com/AndryTheBeast/Songate">Songate</a>, and everything around it follows: HiBy's DAC on 3.5 mm and 4.4 mm, bit-perfect with the volume in the DAC, your earbuds' noise cancelling and battery, the status lights and the hold switch, all in Songate. Updates come to the player itself.<br>
-By <a href="https://github.com/AndryTheBeast"><b>AndryTheBeast</b></a> · version 2.1.1 · based on <a href="https://lineageos.org"><b>LineageOS 21</b></a> and <a href="https://github.com/TrebleDroid"><b>TrebleDroid</b></a><br>
+By <a href="https://github.com/AndryTheBeast"><b>AndryTheBeast</b></a> · version 2.2.1 · based on <a href="https://lineageos.org"><b>LineageOS 21</b></a> and <a href="https://github.com/TrebleDroid"><b>TrebleDroid</b></a><br>
 <a href="../../releases"><b>⬇️ Download</b></a> · <a href="https://github.com/AndryTheBeast/Songate"><b>🎵 Songate</b></a> · <a href="docs/00-read-first.md"><b>⚠️ Read this first</b></a></p>
 
 

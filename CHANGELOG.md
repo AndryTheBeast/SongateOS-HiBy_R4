@@ -1,5 +1,59 @@
 # Changelog
 
+## SongateOS 2.2.1
+
+**SongateOS 2.2.1** brings **Songate 2.2.1** to the R4, and makes the update itself smoother: no extra restart after it. From 2.1.0 or 2.1.1 it's a normal update: your music, apps and settings stay.
+
+**Only for the HiBy R4 standard model** (Snapdragon 665, eMMC), **never the R4 EVA.** **Tests were only made on HiBy's firmware of August 2026.** **The 4.4 mm line out wasn't tested on the device** (its headphone mode was).
+
+> [!CAUTION]
+> **You install SongateOS at your own risk.** Read [Read this first](docs/00-read-first.md) and make your own **EDL backup** ([guide 1](docs/01-backup-edl.md)) before anything else: it is how you go back.
+
+## ⬆️ From SongateOS 2.1.0 or 2.1.1
+
+**Songate › Settings › Updates** finds 2.2.1, shows what changed, downloads it to the microSD card, checks it and installs it through the recovery. No card? Update from a computer with `adb sideload` ([guide 3](docs/03-install-os.md#updates-need-a-microsd-card)).
+
+## 🆕 First install, from HiBy's firmware
+
+1. 🛟 Put **OrangeFox** or **TWRP** in the recovery with fastboot, and turn verification off in `vbmeta`: the `.img` files below and [guide 2](docs/02-recovery.md).
+2. 📦 Follow [guide 3](docs/03-install-os.md): **Format Data**, then install **songateos-2.2.1-R4.zip** from the microSD.
+3. 🎵 Restart: the SongateOS logo, the boot animation, then Songate's setup.
+
+Coming from a SongateOS beta: **Format Data** once before the install (the betas used other keys).
+
+## ✨ SongateOS 2.2.1
+
+- 🎵 **Songate 2.2.1** inside (below)
+- 🔄 No extra restart after an update: Android's saved overlay maps are made again when the system's apps change. After the 2.1.1 update the system interface could stop once and restart the player
+
+## 🎵 Songate 2.2.1 (since 2.1.1)
+
+- 🎚️ Songate's own keyboard for all typing: quick, with a cursor, Shift and caps lock
+- 🎨 Background blur: Classic as before, or Smooth in three strengths. Settings › Appearance › Background
+- 🎤 Lyrics in cards (General, Timing, Online), and word-by-word lyrics fill smoothly
+- ⏳ Sleep timer: Custom, your own minutes on a number pad
+- 🎛️ Equalizer: each band's value shown; tap a band to type its value
+- 🔋 Settings is smoother: long pages no longer slow the app down
+- 🔧 Numbers that change while you look at them (the battery's details, the sleep timer, the time over the seek bar, download progress) no longer move the words beside them
+- 🔧 Closing Songate no longer gets stuck when the network changes, and more fixes for lyrics, tags, sync and your server
+- ℹ️ Last.fm is gone: its API now needs a paid subscription. Plays and likes still sync with your own server
+
+## ⚠️ Known limits
+
+- 🔌 **USB speakers that charge the player:** after unplugging one, the R4 was seen once not to sleep until the next restart. With Charge from USB audio off, it doesn't charge from them at all
+- 📶 Bluetooth 5.0: no LE Audio. AAC was tested
+- 🗂️ Updates and Google apps need a microSD card (the recovery can't read the encrypted internal storage)
+- 📖 More in the README's [Known limits](README.md)
+
+## 📦 Files
+
+| File | What |
+|---|---|
+| `songateos-2.2.1-R4.zip` | 🎵 SongateOS 2.2.1: install from the recovery, or let the player update itself |
+| `songateos-recovery-orangefox-2026.11.22.zip` · `songateos-recovery-twrp-2026.11.22.zip` | 🔁 the recoveries as signed packages: flash from a recovery, or switch in Songate › Settings › Recovery |
+| `OrangeFox-R12.0-Unofficial-R4.img` · `TWRP-3.7-Unofficial-R4.img` | 🛟 the same recoveries as images, for the first install with fastboot |
+| `SHA256SUMS.txt` | 🔍 check every file against it before you use it |
+
 ## SongateOS 2.1.1
 
 **SongateOS 2.1.1** fixes what the first owners of 2.1.0 found, and adds **Charge from USB audio**, with **Songate 2.1.1** inside. From 2.1.0 it's a normal update: your music, apps and settings stay.

@@ -1,5 +1,5 @@
 # The SongateOS layer on top of the LineageOS 21 TrebleDroid GSI. See work/SONGATEOS_IMAGE_PLAN.md.
-SONGATEOS_VERSION := 2.1.1
+SONGATEOS_VERSION := 2.2.1
 LOCAL_SONGATEOS := vendor/songateos
 
 PRODUCT_SYSTEM_PROPERTIES += \
